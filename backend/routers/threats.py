@@ -8,7 +8,8 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from database import get_db
-from models import Threat
+from models import Threat, AppConfig
+from engines.live_signals import detect_threats
 
 router = APIRouter()
 
@@ -49,42 +50,46 @@ async def list_threats(
     offset: int = 0,
     db: Session = Depends(get_db)
 ) -> dict:
-    """List threats with filters"""
-    query = db.query(Threat)
-    
+    """List live threats derived from real Peec metrics."""
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config or not config.project_id or not config.brand_id:
+        return {"total": 0, "limit": limit, "offset": offset, "data": []}
+
+    threats = await detect_threats(
+        config.project_id, config.brand_id,
+        config.company_name or "your brand",
+    )
+
     if severity:
-        query = query.filter(Threat.severity == severity)
+        threats = [t for t in threats if t["severity"] == severity]
     if model:
-        query = query.filter(Threat.model == model)
+        threats = [t for t in threats if t["model"] == model]
     if status:
-        query = query.filter(Threat.status == status)
-    
-    # Get total count
-    total = query.count()
-    
-    # Get paginated results
-    threats = query.order_by(Threat.detected_at.desc()).limit(limit).offset(offset).all()
-    
-    return {
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "data": [ThreatResponse.from_orm(t) for t in threats]
-    }
+        threats = [t for t in threats if t["status"] == status]
+
+    total = len(threats)
+    page = threats[offset:offset + limit]
+    return {"total": total, "limit": limit, "offset": offset, "data": page}
 
 
 @router.get("/threats/{threat_id}")
 async def get_threat(
     threat_id: str,
     db: Session = Depends(get_db)
-) -> ThreatResponse:
-    """Get threat detail"""
-    threat = db.query(Threat).filter(Threat.id == threat_id).first()
-    
-    if not threat:
+) -> dict:
+    """Get a single threat (resolved against the live set)."""
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config or not config.project_id or not config.brand_id:
         raise HTTPException(status_code=404, detail="Threat not found")
-    
-    return ThreatResponse.from_orm(threat)
+
+    threats = await detect_threats(
+        config.project_id, config.brand_id,
+        config.company_name or "your brand",
+    )
+    found = next((t for t in threats if t["id"] == threat_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Threat not found")
+    return found
 
 
 @router.patch("/threats/{threat_id}")
@@ -208,14 +213,17 @@ Best regards,
 
 @router.get("/threats/stats/summary")
 async def get_threat_stats(db: Session = Depends(get_db)) -> dict:
-    """Get threat statistics"""
-    open_threats = db.query(Threat).filter(Threat.status == "OPEN").all()
-    
-    stats = {
-        "critical": len([t for t in open_threats if t.severity == "CRITICAL"]),
-        "high": len([t for t in open_threats if t.severity == "HIGH"]),
-        "medium": len([t for t in open_threats if t.severity == "MEDIUM"]),
-        "low": len([t for t in open_threats if t.severity == "LOW"])
+    """Live threat statistics."""
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config or not config.project_id or not config.brand_id:
+        return {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    threats = await detect_threats(
+        config.project_id, config.brand_id,
+        config.company_name or "your brand",
+    )
+    return {
+        "critical": sum(1 for t in threats if t["severity"] == "CRITICAL"),
+        "high": sum(1 for t in threats if t["severity"] == "HIGH"),
+        "medium": sum(1 for t in threats if t["severity"] == "MEDIUM"),
+        "low": sum(1 for t in threats if t["severity"] == "LOW"),
     }
-    
-    return stats

@@ -8,7 +8,8 @@ from datetime import datetime
 import json
 
 from database import get_db
-from models import CompetitorEvent
+from models import CompetitorEvent, AppConfig
+from engines.live_signals import detect_competitor_events
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -52,27 +53,33 @@ class CompetitorEventResponse(BaseModel):
 async def list_competitor_events(
     db: Session = Depends(get_db)
 ) -> dict:
-    """List competitor crisis events"""
-    events = db.query(CompetitorEvent).order_by(
-        CompetitorEvent.opportunity_score.desc()
-    ).limit(50).all()
-    
-    return {
-        "total": len(events),
-        "data": [CompetitorEventResponse.from_orm(e) for e in events]
-    }
+    """Live competitor crises derived from real Peec brand metrics."""
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config or not config.project_id or not config.brand_id:
+        return {"total": 0, "data": []}
+    events = await detect_competitor_events(
+        config.project_id, config.brand_id,
+        config.company_name or "your brand",
+    )
+    return {"total": len(events), "data": events}
 
 
 @router.get("/competitors/{event_id}")
 async def get_competitor_event(
     event_id: str,
     db: Session = Depends(get_db)
-) -> CompetitorEventResponse:
-    """Get competitor event detail"""
-    event = db.query(CompetitorEvent).filter(CompetitorEvent.id == event_id).first()
-    
-    if not event:
+) -> dict:
+    """Get a competitor event by its derived id."""
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config or not config.project_id or not config.brand_id:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Event not found")
-    
-    return CompetitorEventResponse.from_orm(event)
+    events = await detect_competitor_events(
+        config.project_id, config.brand_id,
+        config.company_name or "your brand",
+    )
+    found = next((e for e in events if e["id"] == event_id), None)
+    if not found:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Event not found")
+    return found

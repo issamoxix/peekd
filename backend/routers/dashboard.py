@@ -10,7 +10,7 @@ from typing import List
 from database import get_db
 from models import Threat, Action, CompetitorEvent, SentimentHistory, AppConfig
 from peec.client import peec_client
-from services.demo_seeder import seed_demo_data_if_needed
+from engines.live_signals import detect_threats, detect_competitor_events
 from config import settings
 
 
@@ -81,7 +81,6 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
     """Get dashboard overview metrics"""
     
     config = await ensure_configured(db)
-    seed_demo_data_if_needed(db, config)
 
     has_config = bool(config and config.project_id)
     
@@ -133,49 +132,55 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
         except Exception as e:
             print(f"Error fetching brand metrics: {e}")
     
-    # Get threat stats
-    open_threats = db.query(Threat).filter(Threat.status == "OPEN").all()
+    # Live threats from real Peec metrics
+    live_threats: list[dict] = []
+    live_competitors: list[dict] = []
+    if has_config and config.brand_id:
+        try:
+            live_threats = await detect_threats(
+                config.project_id, config.brand_id,
+                config.company_name or "your brand",
+            )
+        except Exception as e:
+            print(f"detect_threats failed: {e}")
+        try:
+            live_competitors = await detect_competitor_events(
+                config.project_id, config.brand_id,
+                config.company_name or "your brand",
+            )
+        except Exception as e:
+            print(f"detect_competitor_events failed: {e}")
+
     threat_stats = {
-        "critical": len([t for t in open_threats if t.severity == "CRITICAL"]),
-        "high": len([t for t in open_threats if t.severity == "HIGH"]),
-        "medium": len([t for t in open_threats if t.severity == "MEDIUM"]),
-        "low": len([t for t in open_threats if t.severity == "LOW"])
+        "critical": sum(1 for t in live_threats if t["severity"] == "CRITICAL"),
+        "high": sum(1 for t in live_threats if t["severity"] == "HIGH"),
+        "medium": sum(1 for t in live_threats if t["severity"] == "MEDIUM"),
+        "low": sum(1 for t in live_threats if t["severity"] == "LOW"),
     }
-    
-    # Get recent threats
-    recent_threats = db.query(Threat).filter(
-        Threat.status == "OPEN"
-    ).order_by(Threat.detected_at.desc()).limit(5).all()
-    
+
     recent_threats_data = [
         {
-            "id": t.id,
-            "severity": t.severity,
-            "type": t.type,
-            "model": t.model,
-            "summary": t.summary,
-            "detected_at": t.detected_at.isoformat()
+            "id": t["id"],
+            "severity": t["severity"],
+            "type": t["type"],
+            "model": t["model"],
+            "summary": t["summary"],
+            "detected_at": t["detected_at"],
         }
-        for t in recent_threats
+        for t in live_threats[:5]
     ]
-    
-    # Get competitor events
-    competitor_events = db.query(CompetitorEvent).order_by(
-        CompetitorEvent.detected_at.desc()
-    ).limit(3).all()
-    
+
     competitor_events_data = [
         {
-            "id": e.id,
-            "competitor_name": e.competitor_name,
-            "event_type": e.event_type,
-            "opportunity_score": e.opportunity_score,
-            "detected_at": e.detected_at.isoformat()
+            "id": e["id"],
+            "competitor_name": e["competitor_name"],
+            "event_type": e["event_type"],
+            "opportunity_score": e["opportunity_score"],
+            "detected_at": e["detected_at"],
         }
-        for e in competitor_events
+        for e in live_competitors[:5]
     ]
-    
-    # Get action queue count
+
     action_queue_count = db.query(Action).filter(
         Action.status.in_(["PENDING", "IN_PROGRESS"])
     ).count()
