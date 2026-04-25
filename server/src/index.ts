@@ -3,6 +3,7 @@ import cors from "cors";
 import { config } from "dotenv";
 import db from "./db/index.js";
 import projectsRouter from "./routes/projects.js";
+import analysisRouter from "./routes/analysis.js";
 
 config();
 
@@ -19,6 +20,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/projects", projectsRouter);
+app.use("/api/projects", analysisRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
