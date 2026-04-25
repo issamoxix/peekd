@@ -1,11 +1,14 @@
 import express from "express";
 import cors from "cors";
 import { config } from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 import db from "./db/index.js";
 import projectsRouter from "./routes/projects.js";
 import analysisRouter from "./routes/analysis.js";
 
-config();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, "../../.env") });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -22,6 +25,14 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/projects", projectsRouter);
 app.use("/api/projects", analysisRouter);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+});
+
+// Graceful shutdown for tsx watch
+process.on("SIGTERM", () => {
+  server.close();
+});
+process.on("SIGINT", () => {
+  server.close();
 });

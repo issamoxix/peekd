@@ -1,149 +1,244 @@
 import type { PeecData } from "./claude.js";
 
-// For now, we'll use mock data since actual MCP connection requires OAuth
-// The real implementation would use @modelcontextprotocol/sdk
+// Peec AI REST API Configuration
+const API_BASE_URL = "https://api.peec.ai/customer/v1";
 
 export interface PeecConfig {
-  useMock: boolean;
-  // These would be used for real MCP connection
-  accessToken?: string;
-  refreshToken?: string;
+  apiKey?: string;
+  projectId?: string;
 }
 
-let config: PeecConfig = {
-  useMock: true,
-};
+// Lazy initialization - don't read env vars at module load time
+let config: PeecConfig | null = null;
+
+function getConfig(): PeecConfig {
+  if (!config) {
+    config = {
+      apiKey: process.env.PEEC_API_KEY,
+      projectId: process.env.PEEC_PROJECT_ID,
+    };
+  }
+  return config;
+}
 
 export function configurePeec(newConfig: Partial<PeecConfig>) {
-  config = { ...config, ...newConfig };
+  config = { ...getConfig(), ...newConfig };
 }
 
 export function isPeecConfigured(): boolean {
-  return config.useMock || !!config.accessToken;
+  const cfg = getConfig();
+  return !!cfg.apiKey && !!cfg.projectId;
 }
 
-// Mock data for development
-function generateMockBrandReport(brandName: string): unknown {
-  return {
-    brand: brandName,
-    visibility: 0.45,
-    sentiment: 72,
-    share_of_voice: 0.18,
-    position: 3.2,
-    mentions_by_model: {
-      ChatGPT: { mentions: 12, sentiment: 74 },
-      Perplexity: { mentions: 8, sentiment: 70 },
-      Gemini: { mentions: 5, sentiment: 68 },
-    },
-    date_range: "Last 30 days",
-  };
-}
+// Helper to make API requests
+async function apiRequest(endpoint: string, body: Record<string, unknown>): Promise<unknown> {
+  const cfg = getConfig();
 
-function generateMockDomainReport(domain: string): unknown {
-  return {
-    domain,
-    domains_cited: [
-      { domain: "wikipedia.org", citation_rate: 0.82, group_type: "REFERENCE" },
-      { domain: "techcrunch.com", citation_rate: 0.45, group_type: "EDITORIAL" },
-      { domain: "g2.com", citation_rate: 0.38, group_type: "UGC" },
-      { domain: domain, citation_rate: 0.22, group_type: "OWNED" },
-      { domain: "forbes.com", citation_rate: 0.15, group_type: "EDITORIAL" },
-    ],
-    gap_opportunities: [
-      { competitor: "Competitor A", domains_citing_them: ["capterra.com", "softwareadvice.com"] },
-    ],
-  };
-}
-
-function generateMockChats(brandName: string): unknown[] {
-  return [
-    {
-      id: "chat-1",
-      model: "ChatGPT",
-      query: `What is ${brandName}?`,
-      response: `${brandName} is a software company that provides solutions in their market segment. They are known for their product offerings and have been growing their customer base.`,
-      brand_mentioned: true,
-      sentiment: 72,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "chat-2",
-      model: "Perplexity",
-      query: `Best alternatives to ${brandName}`,
-      response: `When looking for alternatives to ${brandName}, consider these options based on your specific needs...`,
-      brand_mentioned: true,
-      sentiment: 68,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "chat-3",
-      model: "Gemini",
-      query: `${brandName} reviews`,
-      response: `${brandName} has received mixed reviews from users. Some praise the ease of use while others mention the learning curve.`,
-      brand_mentioned: true,
-      sentiment: 65,
-      created_at: new Date().toISOString(),
-    },
-  ];
-}
-
-function generateMockSearchQueries(brandName: string): unknown[] {
-  return [
-    { query: `best ${brandName} alternatives`, frequency: 45, brand_position: 2 },
-    { query: `${brandName} vs competitor`, frequency: 32, brand_position: 1 },
-    { query: `${brandName} pricing`, frequency: 28, brand_position: 1 },
-    { query: `is ${brandName} worth it`, frequency: 18, brand_position: 3 },
-    { query: `${brandName} features`, frequency: 15, brand_position: 1 },
-  ];
-}
-
-export async function fetchPeecData(brandName: string, domain: string): Promise<PeecData> {
-  if (config.useMock) {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    return {
-      brandReport: generateMockBrandReport(brandName),
-      domainReport: generateMockDomainReport(domain),
-      chats: generateMockChats(brandName),
-      searchQueries: generateMockSearchQueries(brandName),
-    };
+  if (!cfg.apiKey) {
+    throw new Error("PEEC_API_KEY not configured. Set it in your .env file.");
   }
 
-  // Real MCP implementation would go here
-  // This requires OAuth setup and @modelcontextprotocol/sdk
-  throw new Error("Real MCP connection not yet implemented. Set useMock: true in config.");
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": cfg.apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Peec API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
 }
 
-// Individual fetch functions for SSE progress reporting
+// Helper for GET requests
+async function apiGet(endpoint: string): Promise<unknown> {
+  const cfg = getConfig();
+
+  if (!cfg.apiKey) {
+    throw new Error("PEEC_API_KEY not configured. Set it in your .env file.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    method: "GET",
+    headers: {
+      "X-API-Key": cfg.apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Peec API error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
+
+// Get date range for last 30 days
+function getDateRange(): { start_date: string; end_date: string } {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - 30);
+
+  return {
+    start_date: start.toISOString().split("T")[0],
+    end_date: end.toISOString().split("T")[0],
+  };
+}
+
 export async function fetchBrandReport(brandName: string): Promise<unknown> {
-  if (config.useMock) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return generateMockBrandReport(brandName);
+  if (!isPeecConfigured()) {
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
   }
-  throw new Error("Real MCP not implemented");
+
+  const { start_date, end_date } = getDateRange();
+
+  try {
+    const result = await apiRequest("/reports/brands", {
+      project_id: getConfig().projectId,
+      start_date,
+      end_date,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching brand report:", error);
+    throw error;
+  }
 }
 
 export async function fetchDomainReport(domain: string): Promise<unknown> {
-  if (config.useMock) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return generateMockDomainReport(domain);
+  if (!isPeecConfigured()) {
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
   }
-  throw new Error("Real MCP not implemented");
+
+  const { start_date, end_date } = getDateRange();
+
+  try {
+    const result = await apiRequest("/reports/domains", {
+      project_id: getConfig().projectId,
+      start_date,
+      end_date,
+      limit: 20,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching domain report:", error);
+    throw error;
+  }
 }
 
-export async function fetchChats(brandName: string): Promise<unknown[]> {
-  if (config.useMock) {
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    return generateMockChats(brandName);
+export async function fetchUrlReport(): Promise<unknown> {
+  if (!isPeecConfigured()) {
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
   }
-  throw new Error("Real MCP not implemented");
+
+  const { start_date, end_date } = getDateRange();
+
+  try {
+    const result = await apiRequest("/reports/urls", {
+      project_id: getConfig().projectId,
+      start_date,
+      end_date,
+      limit: 20,
+    });
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching URL report:", error);
+    throw error;
+  }
 }
 
 export async function fetchSearchQueries(brandName: string): Promise<unknown[]> {
-  if (config.useMock) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    return generateMockSearchQueries(brandName);
+  if (!isPeecConfigured()) {
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
   }
-  throw new Error("Real MCP not implemented");
+
+  try {
+    const result = await apiRequest("/queries/search", {
+      project_id: getConfig().projectId,
+      limit: 20,
+    }) as { rows?: unknown[] };
+
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching search queries:", error);
+    throw error;
+  }
+}
+
+export async function fetchChats(brandName: string): Promise<unknown[]> {
+  if (!isPeecConfigured()) {
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+  }
+
+  try {
+    // Use GET endpoint for listing chats
+    const result = await apiGet(`/chats?project_id=${getConfig().projectId}&limit=10`) as { rows?: unknown[] };
+
+    return result.rows || [];
+  } catch (error) {
+    console.error("Error fetching chats:", error);
+    // Return empty array if chats endpoint isn't available
+    return [];
+  }
+}
+
+export async function fetchChatContent(chatId: string): Promise<unknown> {
+  if (!isPeecConfigured()) {
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+  }
+
+  try {
+    const result = await apiGet(`/chats/${chatId}`);
+    return result;
+  } catch (error) {
+    console.error("Error fetching chat content:", error);
+    throw error;
+  }
+}
+
+export async function fetchPeecData(brandName: string, domain: string): Promise<PeecData> {
+  // Fetch all data in parallel
+  const [brandReport, domainReport, urlReport, chats, searchQueries] = await Promise.all([
+    fetchBrandReport(brandName),
+    fetchDomainReport(domain),
+    fetchUrlReport(),
+    fetchChats(brandName),
+    fetchSearchQueries(brandName),
+  ]);
+
+  // Fetch content for first few chats to get sample AI responses
+  const chatContents: unknown[] = [];
+  const chatList = chats as Array<{ id?: string }>;
+  const chatIds = chatList.slice(0, 3).map(c => c.id).filter(Boolean) as string[];
+
+  for (const chatId of chatIds) {
+    try {
+      const content = await fetchChatContent(chatId);
+      chatContents.push(content);
+    } catch (error) {
+      console.error(`Error fetching chat ${chatId}:`, error);
+    }
+  }
+
+  return {
+    brandReport,
+    domainReport,
+    urlReport,
+    chats,
+    chatContents,
+    searchQueries,
+  };
+}
+
+// No longer needed - REST API doesn't require disconnect
+export async function disconnectPeec(): Promise<void> {
+  // No-op for REST API
 }

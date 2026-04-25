@@ -4,7 +4,15 @@ import { GAP_ANALYSIS_SYSTEM, formatGapAnalysisPrompt } from "../prompts/gap-ana
 import { CONTENT_STRATEGY_SYSTEM, formatStrategyPrompt } from "../prompts/content-strategy.js";
 import { SNAPSHOT_COMPARISON_SYSTEM, formatSnapshotPrompt } from "../prompts/snapshot-comparison.js";
 
-const anthropic = new Anthropic();
+// Lazy initialization to ensure env vars are loaded first
+let anthropic: Anthropic | null = null;
+
+function getClient(): Anthropic {
+  if (!anthropic) {
+    anthropic = new Anthropic();
+  }
+  return anthropic;
+}
 
 function parseJsonResponse<T>(response: Anthropic.Message): T {
   const textBlock = response.content.find((block) => block.type === "text");
@@ -18,7 +26,9 @@ function parseJsonResponse<T>(response: Anthropic.Message): T {
 export interface PeecData {
   brandReport: unknown;
   domainReport: unknown;
+  urlReport?: unknown;
   chats: unknown[];
+  chatContents?: unknown[];
   searchQueries: unknown[];
 }
 
@@ -44,7 +54,7 @@ export async function synthesizeGapAnalysis(
   brandBrief: BrandBrief,
   peecData: PeecData
 ): Promise<GapAnalysisResult> {
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 4096,
     system: GAP_ANALYSIS_SYSTEM,
@@ -90,7 +100,7 @@ export async function generateStrategy(
   brandBrief: BrandBrief,
   gapAnalysis: GapAnalysisResult
 ): Promise<StrategyResult> {
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 8192,
     system: CONTENT_STRATEGY_SYSTEM,
@@ -114,7 +124,7 @@ export async function compareSnapshots(
   current: PeecData,
   brandName: string
 ): Promise<SnapshotComparisonResult> {
-  const response = await anthropic.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 2048,
     system: SNAPSHOT_COMPARISON_SYSTEM,

@@ -1,14 +1,14 @@
 import { Router, Request, Response } from "express";
 import { v4 as uuid } from "uuid";
 import db, { now } from "../db/index.js";
-import { fetchBrandReport, fetchDomainReport, fetchChats, fetchSearchQueries } from "../services/peec.js";
+import { fetchBrandReport, fetchDomainReport, fetchUrlReport, fetchChats, fetchChatContent, fetchSearchQueries } from "../services/peec.js";
 import { synthesizeGapAnalysis, type PeecData, type GapAnalysisResult } from "../services/claude.js";
-import type { BrandBrief, GapAnalysis, SSEProgressEvent, SSECompleteEvent, SSEErrorEvent } from "shared";
+import type { BrandBrief, GapAnalysis, ContentStrategy, SSEProgressEvent, SSECompleteEvent, SSEErrorEvent } from "shared";
 
 const router = Router();
 
 // Helper to send SSE events
-function sendSSE(res: Response, event: SSEProgressEvent | SSECompleteEvent<GapAnalysis> | SSEErrorEvent): void {
+function sendSSE<T = GapAnalysis>(res: Response, event: SSEProgressEvent | SSECompleteEvent<T> | SSEErrorEvent): void {
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
@@ -129,12 +129,32 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
       const domainReport = await fetchDomainReport(brief.domain);
       sendSSE(res, { type: "progress", step: "fetching_domain_report", status: "complete" });
 
-      // Step 3: Fetch chats
+      // Step 3: Fetch URL report
+      sendSSE(res, { type: "progress", step: "fetching_url_report", status: "in_progress" });
+      const urlReport = await fetchUrlReport();
+      sendSSE(res, { type: "progress", step: "fetching_url_report", status: "complete" });
+
+      // Step 4: Fetch chats list
       sendSSE(res, { type: "progress", step: "fetching_chats", status: "in_progress" });
       const chats = await fetchChats(brief.brandName);
       sendSSE(res, { type: "progress", step: "fetching_chats", status: "complete" });
 
-      // Step 4: Fetch search queries (additional data for better analysis)
+      // Step 5: Fetch chat contents (sample AI responses)
+      sendSSE(res, { type: "progress", step: "fetching_chat_contents", status: "in_progress" });
+      const chatContents: unknown[] = [];
+      const chatList = chats as Array<{ id?: string }>;
+      const chatIds = chatList.slice(0, 3).map(c => c.id).filter(Boolean) as string[];
+      for (const chatId of chatIds) {
+        try {
+          const content = await fetchChatContent(chatId);
+          chatContents.push(content);
+        } catch (error) {
+          console.error(`Error fetching chat ${chatId}:`, error);
+        }
+      }
+      sendSSE(res, { type: "progress", step: "fetching_chat_contents", status: "complete" });
+
+      // Step 6: Fetch search queries
       sendSSE(res, { type: "progress", step: "fetching_search_queries", status: "in_progress" });
       const searchQueries = await fetchSearchQueries(brief.brandName);
       sendSSE(res, { type: "progress", step: "fetching_search_queries", status: "complete" });
@@ -143,7 +163,9 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
       const peecData: PeecData = {
         brandReport,
         domainReport,
+        urlReport,
         chats,
+        chatContents,
         searchQueries,
       };
 
@@ -183,10 +205,25 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
   } else {
     // Non-SSE request - run synchronously and return JSON
     try {
+      const chats = await fetchChats(brief.brandName);
+      const chatList = chats as Array<{ id?: string }>;
+      const chatIds = chatList.slice(0, 3).map(c => c.id).filter(Boolean) as string[];
+      const chatContents: unknown[] = [];
+      for (const chatId of chatIds) {
+        try {
+          const content = await fetchChatContent(chatId);
+          chatContents.push(content);
+        } catch (error) {
+          console.error(`Error fetching chat ${chatId}:`, error);
+        }
+      }
+
       const peecData: PeecData = {
         brandReport: await fetchBrandReport(brief.brandName),
         domainReport: await fetchDomainReport(brief.domain),
-        chats: await fetchChats(brief.brandName),
+        urlReport: await fetchUrlReport(),
+        chats,
+        chatContents,
         searchQueries: await fetchSearchQueries(brief.brandName),
       };
 
@@ -276,6 +313,250 @@ router.get("/:id/analysis/history", (req: Request, res: Response) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to parse gap analyses";
     res.status(500).json({ error: errorMessage, code: "PARSE_ERROR" });
+  }
+});
+
+// POST /api/projects/:id/strategy - Generate content strategy with SSE
+router.post("/:id/strategy", async (req: Request, res: Response) => {
+  const projectId = req.params.id;
+  const acceptHeader = req.get("Accept") || "";
+  const useSSE = acceptHeader.includes("text/event-stream");
+
+  // Check if project exists
+  const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
+  if (!project) {
+    if (useSSE) {
+      setSSEHeaders(res);
+      sendSSE(res, { type: "error", code: "NOT_FOUND", message: "Project not found" });
+      return res.end();
+    }
+    return res.status(404).json({ error: "Project not found", code: "NOT_FOUND" });
+  }
+
+  // Get brand brief
+  let brief: BrandBrief | null;
+  try {
+    brief = getBrandBrief(projectId);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to load brand brief";
+    if (useSSE) {
+      setSSEHeaders(res);
+      sendSSE(res, { type: "error", code: "BRIEF_ERROR", message: errorMessage });
+      return res.end();
+    }
+    return res.status(500).json({ error: errorMessage, code: "BRIEF_ERROR" });
+  }
+
+  if (!brief) {
+    if (useSSE) {
+      setSSEHeaders(res);
+      sendSSE(res, { type: "error", code: "NO_BRIEF", message: "No brand brief found" });
+      return res.end();
+    }
+    return res.status(400).json({ error: "No brand brief found", code: "NO_BRIEF" });
+  }
+
+  // Get latest gap analysis
+  const analysisRow = db
+    .prepare(
+      `SELECT id, project_id, peec_data, analysis, created_at
+       FROM gap_analyses
+       WHERE project_id = ?
+       ORDER BY created_at DESC
+       LIMIT 1`
+    )
+    .get(projectId) as Record<string, unknown> | undefined;
+
+  if (!analysisRow) {
+    if (useSSE) {
+      setSSEHeaders(res);
+      sendSSE(res, { type: "error", code: "NO_ANALYSIS", message: "Gap analysis required before generating strategy" });
+      return res.end();
+    }
+    return res.status(400).json({ error: "Gap analysis required before generating strategy", code: "NO_ANALYSIS" });
+  }
+
+  const gapAnalysis = rowToGapAnalysis(analysisRow);
+  const gapAnalysisResult: GapAnalysisResult = {
+    currentStateSummary: gapAnalysis.currentStateSummary,
+    targetState: gapAnalysis.targetState,
+    gaps: gapAnalysis.gaps,
+    citationSources: gapAnalysis.citationSources,
+  };
+
+  if (useSSE) {
+    setSSEHeaders(res);
+    res.flushHeaders();
+
+    try {
+      // Step 1: Generate strategy
+      sendSSE(res, { type: "progress", step: "generating_strategy", status: "in_progress" });
+      const { generateStrategy } = await import("../services/claude.js");
+      const strategyResult = await generateStrategy(brief, gapAnalysisResult);
+      sendSSE(res, { type: "progress", step: "generating_strategy", status: "complete" });
+
+      // Store in database
+      const strategyId = uuid();
+      const timestamp = now();
+
+      db.prepare(
+        `INSERT INTO strategies (id, project_id, gap_analysis_id, content, quick_wins_state, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        strategyId,
+        projectId,
+        analysisRow.id as string,
+        JSON.stringify(strategyResult),
+        JSON.stringify(strategyResult.quickWins),
+        timestamp,
+        timestamp
+      );
+
+      // Create ContentStrategy object
+      const contentStrategy: ContentStrategy = {
+        id: strategyId,
+        projectId,
+        gapAnalysisId: analysisRow.id as string,
+        articles: strategyResult.articles,
+        structuredData: strategyResult.structuredData,
+        prAngles: strategyResult.prAngles,
+        quickWins: strategyResult.quickWins,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      sendSSE(res, { type: "complete", data: contentStrategy });
+      res.end();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      sendSSE(res, { type: "error", code: "STRATEGY_FAILED", message: errorMessage });
+      res.end();
+    }
+  } else {
+    // Non-SSE request
+    try {
+      const { generateStrategy } = await import("../services/claude.js");
+      const strategyResult = await generateStrategy(brief, gapAnalysisResult);
+
+      const strategyId = uuid();
+      const timestamp = now();
+
+      db.prepare(
+        `INSERT INTO strategies (id, project_id, gap_analysis_id, content, quick_wins_state, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        strategyId,
+        projectId,
+        analysisRow.id as string,
+        JSON.stringify(strategyResult),
+        JSON.stringify(strategyResult.quickWins),
+        timestamp,
+        timestamp
+      );
+
+      const contentStrategy: ContentStrategy = {
+        id: strategyId,
+        projectId,
+        gapAnalysisId: analysisRow.id as string,
+        articles: strategyResult.articles,
+        structuredData: strategyResult.structuredData,
+        prAngles: strategyResult.prAngles,
+        quickWins: strategyResult.quickWins,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
+
+      res.status(201).json(contentStrategy);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      res.status(500).json({ error: errorMessage, code: "STRATEGY_FAILED" });
+    }
+  }
+});
+
+// GET /api/projects/:id/strategy - Get latest content strategy
+router.get("/:id/strategy", (req: Request, res: Response) => {
+  const projectId = req.params.id;
+
+  const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
+  if (!project) {
+    return res.status(404).json({ error: "Project not found", code: "NOT_FOUND" });
+  }
+
+  const row = db
+    .prepare(
+      `SELECT id, project_id, gap_analysis_id, content, quick_wins_state, created_at, updated_at
+       FROM strategies
+       WHERE project_id = ?
+       ORDER BY created_at DESC
+       LIMIT 1`
+    )
+    .get(projectId) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    return res.status(404).json({ error: "No content strategy found", code: "NO_STRATEGY" });
+  }
+
+  try {
+    const content = JSON.parse(row.content as string);
+    const quickWinsState = JSON.parse(row.quick_wins_state as string);
+
+    const strategy: ContentStrategy = {
+      id: row.id as string,
+      projectId: row.project_id as string,
+      gapAnalysisId: row.gap_analysis_id as string,
+      articles: content.articles,
+      structuredData: content.structuredData,
+      prAngles: content.prAngles,
+      quickWins: quickWinsState,
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+    };
+
+    res.json(strategy);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to parse strategy";
+    res.status(500).json({ error: errorMessage, code: "PARSE_ERROR" });
+  }
+});
+
+// PATCH /api/projects/:id/strategy/quick-wins/:qwId - Toggle quick win completion
+router.patch("/:id/strategy/quick-wins/:qwId", (req: Request, res: Response) => {
+  const { id: projectId, qwId } = req.params;
+  const { completed } = req.body;
+
+  if (typeof completed !== "boolean") {
+    return res.status(400).json({ error: "completed must be a boolean", code: "INVALID_INPUT" });
+  }
+
+  const row = db
+    .prepare(
+      `SELECT id, quick_wins_state FROM strategies WHERE project_id = ? ORDER BY created_at DESC LIMIT 1`
+    )
+    .get(projectId) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    return res.status(404).json({ error: "No strategy found", code: "NO_STRATEGY" });
+  }
+
+  try {
+    const quickWins = JSON.parse(row.quick_wins_state as string) as Array<{ id: string; completed: boolean }>;
+    const qwIndex = quickWins.findIndex((qw) => qw.id === qwId);
+
+    if (qwIndex === -1) {
+      return res.status(404).json({ error: "Quick win not found", code: "NOT_FOUND" });
+    }
+
+    quickWins[qwIndex].completed = completed;
+
+    db.prepare(
+      `UPDATE strategies SET quick_wins_state = ?, updated_at = ? WHERE id = ?`
+    ).run(JSON.stringify(quickWins), now(), row.id as string);
+
+    res.json({ success: true, quickWin: quickWins[qwIndex] });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to update quick win";
+    res.status(500).json({ error: errorMessage, code: "UPDATE_ERROR" });
   }
 });
 
