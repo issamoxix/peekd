@@ -2,18 +2,19 @@
 
 Given a brand tracked in Peec, suggest prompts to seed for AI-search
 visibility tracking. Pulls the brand's homepage via Peec's URL scraper for
-context, then asks Claude for categorized suggestions with rationales.
+context, then asks an OpenAI model for categorized suggestions with
+rationales.
 """
 from __future__ import annotations
 
 import json
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from peec_client import PeecClient
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "gpt-4o"
 HOMEPAGE_MAX_CHARS = 8_000
 
 SYSTEM = """You design prompts for AI-search visibility tracking. The user \
@@ -53,11 +54,11 @@ class PromptRecommender:
     def __init__(
         self,
         peec: PeecClient,
-        anthropic_client: AsyncAnthropic | None = None,
+        openai_client: AsyncOpenAI | None = None,
         model: str = DEFAULT_MODEL,
     ):
         self.peec = peec
-        self.llm = anthropic_client or AsyncAnthropic()
+        self.llm = openai_client or AsyncOpenAI()
         self.model = model
 
     async def recommend(self, brand_id: str, count: int = 12) -> dict:
@@ -76,15 +77,16 @@ class PromptRecommender:
             f"---\n{homepage_md or '(homepage unavailable)'}\n---"
         )
 
-        msg = await self.llm.messages.create(
+        msg = await self.llm.chat.completions.create(
             model=self.model,
             max_tokens=2500,
-            system=[
-                {"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM},
+                {"role": "user", "content": user},
             ],
-            messages=[{"role": "user", "content": user}],
         )
-        return _parse_json(msg.content[0].text)
+        return _parse_json(msg.choices[0].message.content)
 
     async def _scrape_homepage(self, brand: dict) -> str:
         domain = (brand.get("domains") or [None])[0]

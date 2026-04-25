@@ -2,8 +2,8 @@
 
 Maps the citation graph for a brand's category using Peec's domain & URL
 reports, identifies URLs that LLMs cite heavily but where the brand is
-absent (top infiltration targets), and asks Claude to generate a tailored
-outreach plan for each — guest post pitch, product review request,
+absent (top infiltration targets), and asks an OpenAI model to generate a
+tailored outreach plan for each — guest post pitch, product review request,
 partnership angle, or community engagement.
 """
 from __future__ import annotations
@@ -15,11 +15,11 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from peec_client import PeecClient
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "gpt-4o"
 SOURCE_SCRAPE_CHARS = 8_000
 
 # URL classifications worth pitching for inclusion.
@@ -115,11 +115,11 @@ class SourceInfiltrationAgent:
     def __init__(
         self,
         peec: PeecClient,
-        anthropic_client: AsyncAnthropic | None = None,
+        openai_client: AsyncOpenAI | None = None,
         model: str = DEFAULT_MODEL,
     ):
         self.peec = peec
-        self.llm = anthropic_client or AsyncAnthropic()
+        self.llm = openai_client or AsyncOpenAI()
         self.model = model
 
     async def run(
@@ -308,19 +308,16 @@ class SourceInfiltrationAgent:
             f"Page content (markdown, may be truncated):\n---\n"
             f"{page_md[:SOURCE_SCRAPE_CHARS]}\n---"
         )
-        msg = await self.llm.messages.create(
+        msg = await self.llm.chat.completions.create(
             model=self.model,
             max_tokens=1500,
-            system=[
-                {
-                    "type": "text",
-                    "text": STRATEGY_SYSTEM,
-                    "cache_control": {"type": "ephemeral"},
-                }
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": STRATEGY_SYSTEM},
+                {"role": "user", "content": user_msg},
             ],
-            messages=[{"role": "user", "content": user_msg}],
         )
-        return _parse_json(msg.content[0].text)
+        return _parse_json(msg.choices[0].message.content)
 
 
 def _domain_of(url: str) -> str:

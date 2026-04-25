@@ -9,8 +9,7 @@ Inputs come from the Peec AI customer API:
   - get_chat           -> full assistant response, sources, brand mentions
   - get_url_content    -> scraped markdown of a cited source
 
-LLM analysis runs against the Anthropic API (claude-sonnet-4-6 by default)
-with prompt caching on the static instructions.
+LLM analysis runs against the OpenAI API (gpt-4o by default).
 """
 from __future__ import annotations
 
@@ -21,11 +20,11 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
-from anthropic import AsyncAnthropic
+from openai import AsyncOpenAI
 
 from peec_client import PeecClient
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "gpt-4o"
 MAX_SOURCE_CHARS = 12_000  # cap each scraped source to keep prompts tight
 TRIAGE_PROMPT = """You are an analyst checking whether an AI chatbot response \
 speaks negatively about a specific brand.
@@ -119,11 +118,11 @@ class SentimentFlipAgent:
     def __init__(
         self,
         peec: PeecClient,
-        anthropic_client: AsyncAnthropic | None = None,
+        openai_client: AsyncOpenAI | None = None,
         model: str = DEFAULT_MODEL,
     ):
         self.peec = peec
-        self.llm = anthropic_client or AsyncAnthropic()
+        self.llm = openai_client or AsyncOpenAI()
         self.model = model
 
     async def run(
@@ -207,12 +206,13 @@ class SentimentFlipAgent:
             brand_domains=", ".join(brand.get("domains", [])) or "(none)",
             response=_last_assistant(chat)[:8000],
         )
-        msg = await self.llm.messages.create(
+        msg = await self.llm.chat.completions.create(
             model=self.model,
             max_tokens=512,
+            response_format={"type": "json_object"},
             messages=[{"role": "user", "content": prompt}],
         )
-        return _parse_json(msg.content[0].text)
+        return _parse_json(msg.choices[0].message.content)
 
     async def _counter(
         self, finding: NegativeFinding, claim: str, source: dict
@@ -228,19 +228,21 @@ class SentimentFlipAgent:
             f"Source domain: {source.get('domain')}\n\n"
             f"Source content (markdown):\n{source_md[:MAX_SOURCE_CHARS]}"
         )
-        msg = await self.llm.messages.create(
+        msg = await self.llm.chat.completions.create(
             model=self.model,
             max_tokens=1500,
-            system=[{"type": "text", "text": STRATEGY_SYSTEM,
-                     "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": user_msg}],
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": STRATEGY_SYSTEM},
+                {"role": "user", "content": user_msg},
+            ],
         )
         return CounterContentPlan(
             chat_id=finding.chat_id,
             brand_name=finding.brand_name,
             claim=claim,
             source_url=url,
-            plan=_parse_json(msg.content[0].text),
+            plan=_parse_json(msg.choices[0].message.content),
         )
 
 
@@ -304,8 +306,8 @@ async def _cli() -> None:
     p.add_argument("--model", default=DEFAULT_MODEL)
     args = p.parse_args()
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        raise SystemExit("ANTHROPIC_API_KEY env var required")
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise SystemExit("OPENAI_API_KEY env var required")
 
     async with PeecClient() as peec:
         agent = SentimentFlipAgent(peec, model=args.model)
