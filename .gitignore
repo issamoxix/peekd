@@ -1,6 +1,23 @@
+# Node
 node_modules/
 dist/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Environment
 .env
+
+# Database
 *.db
 *.sqlite
+
+# Local Claude Code state
+.claude/
+
+# Editor / OS
 .DS_Store
+.idea/
+.vscode/
