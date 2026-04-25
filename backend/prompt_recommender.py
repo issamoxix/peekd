@@ -109,4 +109,37 @@ def _parse_json(text: str) -> Any:
         if text.startswith("json"):
             text = text[4:]
         text = text.rsplit("```", 1)[0]
-    return json.loads(text)
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    start = min(
+        (i for i in (text.find("{"), text.find("[")) if i != -1), default=-1
+    )
+    if start == -1:
+        raise ValueError(f"no JSON object found in model output: {text[:200]!r}")
+    open_ch = text[start]
+    close_ch = "}" if open_ch == "{" else "]"
+    depth = 0
+    in_str = False
+    esc = False
+    for i in range(start, len(text)):
+        c = text[i]
+        if in_str:
+            if esc:
+                esc = False
+            elif c == "\\":
+                esc = True
+            elif c == '"':
+                in_str = False
+            continue
+        if c == '"':
+            in_str = True
+        elif c == open_ch:
+            depth += 1
+        elif c == close_ch:
+            depth -= 1
+            if depth == 0:
+                return json.loads(text[start : i + 1])
+    raise ValueError(f"unterminated JSON in model output: {text[:200]!r}")
