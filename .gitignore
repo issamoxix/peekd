@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.env
+
+# Local Claude Code state
+.claude/
+
+# Sub-project with its own git history
+big-hack/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
