@@ -1,0 +1,169 @@
+import { useQuery } from '@tanstack/react-query'
+import axios from 'axios'
+import { 
+  Shield, AlertTriangle, TrendingUp, Activity, 
+  Eye, Zap, ArrowUpRight, ArrowDownRight 
+} from 'lucide-react'
+
+interface DashboardData {
+  configured: boolean
+  company_name?: string
+  brand_visibility?: number
+  sentiment_score?: number
+  visibility_trend?: string
+  sentiment_trend?: string
+  active_threats?: { critical: number; high: number; medium: number; low: number }
+  top_models?: Array<{ model: string; visibility: number; sentiment: number }>
+  recent_threats?: Array<{ id: string; severity: string; type: string; model: string; summary: string; detected_at: string }>
+  action_queue_count?: number
+}
+
+const modelColors: Record<string, string> = {
+  chatgpt: 'bg-green-500', perplexity: 'bg-blue-500', gemini: 'bg-purple-500',
+  claude: 'bg-orange-500', copilot: 'bg-cyan-500', grok: 'bg-red-500',
+}
+
+const severityColors: Record<string, string> = {
+  CRITICAL: 'bg-red-500', HIGH: 'bg-orange-500', MEDIUM: 'bg-yellow-500', LOW: 'bg-gray-500',
+}
+
+export default function Dashboard() {
+  const { data, isLoading, error } = useQuery<DashboardData>({
+    queryKey: ['dashboard'],
+    queryFn: async () => (await axios.get('/api/dashboard')).data,
+    refetchInterval: 30000,
+  })
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-[80vh]">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex items-center justify-center h-[80vh]">
+      <div className="bg-gray-900 rounded-xl border border-red-500/30 p-8 max-w-md text-center">
+        <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h2 className="text-xl font-semibold text-white mb-2">Connection Error</h2>
+        <p className="text-gray-400">Backend not reachable. Run <code className="bg-gray-800 px-2 py-1 rounded text-sm">python3 main.py</code> in the backend folder.</p>
+      </div>
+    </div>
+  )
+
+  const d = data!
+  const totalThreats = d.active_threats ? Object.values(d.active_threats).reduce((a, b) => a + b, 0) : 0
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">
+          Dashboard {d.company_name && <span className="text-blue-400">— {d.company_name}</span>}
+        </h1>
+        <p className="text-gray-400 text-sm mt-1">
+          {d.company_name ? `Monitoring ${d.company_name} across AI models` : 'Real-time brand monitoring across AI models'}
+        </p>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <KPICard icon={Eye} label="Brand Visibility" value={d.brand_visibility ? `${(d.brand_visibility * 100).toFixed(1)}%` : '—'} trend={d.visibility_trend} color="blue" />
+        <KPICard icon={Activity} label="Sentiment Score" value={d.sentiment_score ? `${d.sentiment_score.toFixed(1)}` : '—'} trend={d.sentiment_trend} color={d.sentiment_score && d.sentiment_score >= 65 ? 'green' : d.sentiment_score && d.sentiment_score >= 45 ? 'yellow' : 'red'} />
+        <KPICard icon={AlertTriangle} label="Active Threats" value={String(totalThreats)} trend={d.active_threats?.critical ? `${d.active_threats.critical} critical` : 'No critical'} color="red" />
+        <KPICard icon={Zap} label="Action Queue" value={String(d.action_queue_count ?? 0)} trend="pending actions" color="purple" />
+      </div>
+
+      {/* Threat Breakdown + Models */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Threat Severity */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Threat Severity Breakdown</h2>
+          <div className="space-y-3">
+            {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(sev => {
+              const count = d.active_threats?.[sev.toLowerCase() as keyof typeof d.active_threats] ?? 0
+              const max = Math.max(totalThreats, 1)
+              return (
+                <div key={sev} className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${severityColors[sev]}`} />
+                  <span className="text-sm text-gray-400 w-20">{sev}</span>
+                  <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div className={`h-full ${severityColors[sev]} rounded-full transition-all`} style={{ width: `${(count / max) * 100}%` }} />
+                  </div>
+                  <span className="text-sm font-mono text-white w-8 text-right">{count}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* AI Models */}
+        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">AI Model Coverage</h2>
+          {d.top_models && d.top_models.length > 0 ? (
+            <div className="space-y-3">
+              {d.top_models.map(m => (
+                <div key={m.model} className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${modelColors[m.model] || 'bg-gray-500'}`} />
+                  <span className="text-sm text-gray-300 w-24 capitalize">{m.model}</span>
+                  <div className="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${m.visibility * 100}%` }} />
+                  </div>
+                  <span className="text-xs text-gray-500 w-16 text-right">{(m.visibility * 100).toFixed(0)}% vis</span>
+                  <span className="text-xs text-gray-500 w-16 text-right">{m.sentiment.toFixed(0)} sent</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">No model data available yet. Data will appear after the first scan.</p>
+          )}
+        </div>
+      </div>
+
+      {/* Recent Threats */}
+      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Recent Threats</h2>
+        {d.recent_threats && d.recent_threats.length > 0 ? (
+          <div className="space-y-3">
+            {d.recent_threats.map(t => (
+              <div key={t.id} className="flex items-center gap-4 p-3 bg-gray-800/50 rounded-lg">
+                <span className={`px-2 py-1 rounded text-xs font-bold text-white ${severityColors[t.severity]}`}>{t.severity}</span>
+                <span className={`px-2 py-0.5 rounded text-xs ${modelColors[t.model] || 'bg-gray-600'} text-white capitalize`}>{t.model}</span>
+                <span className="text-sm text-gray-300 flex-1 truncate">{t.summary}</span>
+                <span className="text-xs text-gray-500">{t.type}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No threats detected yet. Scans run automatically every 2 hours.</p>
+        )}
+      </div>
+
+      {/* Status */}
+      <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center gap-3">
+        <Shield className="w-5 h-5 text-blue-400" />
+        <p className="text-blue-300 text-sm">Sentinel is actively monitoring your brand across ChatGPT, Perplexity, Gemini, Claude, Copilot, and Grok.</p>
+      </div>
+    </div>
+  )
+}
+
+function KPICard({ icon: Icon, label, value, trend, color }: { icon: any; label: string; value: string; trend?: string; color: string }) {
+  const colorMap: Record<string, string> = {
+    blue: 'text-blue-400 bg-blue-500/10', green: 'text-green-400 bg-green-500/10',
+    red: 'text-red-400 bg-red-500/10', yellow: 'text-yellow-400 bg-yellow-500/10',
+    purple: 'text-purple-400 bg-purple-500/10',
+  }
+  const [textColor] = (colorMap[color] || colorMap.blue).split(' ')
+  return (
+    <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm text-gray-400">{label}</span>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorMap[color]}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+      </div>
+      <div className={`text-3xl font-bold ${textColor} mb-1`}>{value}</div>
+      {trend && <p className="text-xs text-gray-500">{trend}</p>}
+    </div>
+  )
+}
