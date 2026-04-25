@@ -1,6 +1,7 @@
 """Thin async client for the Peec AI customer API."""
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any
 
@@ -62,6 +63,82 @@ class PeecClient:
         r = await self._client.get(f"/chats/{chat_id}/content")
         r.raise_for_status()
         return r.json()
+
+    async def create_prompt(self, text: str, country_code: str = "US") -> dict:
+        r = await self._client.post(
+            "/prompts",
+            json={"text": text, "country_code": country_code},
+        )
+        r.raise_for_status()
+        return r.json()
+
+    async def create_prompts_batch(
+        self, texts: list[str], country_code: str = "US"
+    ) -> list[dict]:
+        async def one(t: str) -> dict:
+            try:
+                created = await self.create_prompt(t, country_code)
+                return {"text": t, "ok": True, "id": created.get("id"), "raw": created}
+            except httpx.HTTPStatusError as e:
+                return {
+                    "text": t,
+                    "ok": False,
+                    "status": e.response.status_code,
+                    "error": e.response.text,
+                }
+
+        return await asyncio.gather(*(one(t) for t in texts))
+
+    async def get_brands_report(
+        self,
+        *,
+        start_date: str,
+        end_date: str,
+        dimensions: list[str] | None = None,
+        filters: list[dict] | None = None,
+        limit: int = 10000,
+    ) -> list[dict]:
+        body: dict[str, Any] = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "limit": limit,
+        }
+        if dimensions:
+            body["dimensions"] = dimensions
+        if filters:
+            body["filters"] = filters
+        r = await self._client.post("/reports/brands", json=body)
+        r.raise_for_status()
+        return r.json().get("data", [])
+
+    async def _report(
+        self,
+        path: str,
+        *,
+        start_date: str,
+        end_date: str,
+        dimensions: list[str] | None = None,
+        filters: list[dict] | None = None,
+        limit: int = 10000,
+    ) -> list[dict]:
+        body: dict[str, Any] = {
+            "start_date": start_date,
+            "end_date": end_date,
+            "limit": limit,
+        }
+        if dimensions:
+            body["dimensions"] = dimensions
+        if filters:
+            body["filters"] = filters
+        r = await self._client.post(path, json=body)
+        r.raise_for_status()
+        return r.json().get("data", [])
+
+    async def get_domains_report(self, **kwargs: Any) -> list[dict]:
+        return await self._report("/reports/domains", **kwargs)
+
+    async def get_urls_report(self, **kwargs: Any) -> list[dict]:
+        return await self._report("/reports/urls", **kwargs)
 
     async def get_url_content(self, url: str, max_length: int = 100_000) -> dict | None:
         r = await self._client.post(
