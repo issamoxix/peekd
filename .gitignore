@@ -7,9 +7,6 @@ __pycache__/
 # Local Claude Code state
 .claude/
 
-# Sub-project with its own git history
-big-hack/
-
 # Editor / OS
 .DS_Store
 .idea/
