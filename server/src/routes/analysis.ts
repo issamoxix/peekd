@@ -12,6 +12,13 @@ function sendSSE(res: Response, event: SSEProgressEvent | SSECompleteEvent<GapAn
   res.write(`data: ${JSON.stringify(event)}\n\n`);
 }
 
+// Helper to set SSE headers
+function setSSEHeaders(res: Response): void {
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+}
+
 // Helper to get brand brief by project ID
 function getBrandBrief(projectId: string): BrandBrief | null {
   const row = db
@@ -27,33 +34,43 @@ function getBrandBrief(projectId: string): BrandBrief | null {
     return null;
   }
 
-  return {
-    id: row.id as string,
-    projectId: row.project_id as string,
-    brandName: row.brand_name as string,
-    domain: row.domain as string,
-    category: row.category as string,
-    desiredTone: row.desired_tone as BrandBrief["desiredTone"],
-    desiredClaims: JSON.parse(row.desired_claims as string),
-    keyDifferentiators: JSON.parse(row.key_differentiators as string),
-    competitors: JSON.parse(row.competitors as string),
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-  };
+  try {
+    return {
+      id: row.id as string,
+      projectId: row.project_id as string,
+      brandName: row.brand_name as string,
+      domain: row.domain as string,
+      category: row.category as string,
+      desiredTone: row.desired_tone as BrandBrief["desiredTone"],
+      desiredClaims: JSON.parse(row.desired_claims as string),
+      keyDifferentiators: JSON.parse(row.key_differentiators as string),
+      competitors: JSON.parse(row.competitors as string),
+      createdAt: row.created_at as string,
+      updatedAt: row.updated_at as string,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Invalid JSON in brand brief";
+    throw new Error(`Failed to parse brand brief: ${errorMessage}`);
+  }
 }
 
 // Helper to convert DB row to GapAnalysis
 function rowToGapAnalysis(row: Record<string, unknown>): GapAnalysis {
-  const analysis = JSON.parse(row.analysis as string) as GapAnalysisResult;
-  return {
-    id: row.id as string,
-    projectId: row.project_id as string,
-    currentStateSummary: analysis.currentStateSummary,
-    targetState: analysis.targetState,
-    gaps: analysis.gaps,
-    citationSources: analysis.citationSources,
-    createdAt: row.created_at as string,
-  };
+  try {
+    const analysis = JSON.parse(row.analysis as string) as GapAnalysisResult;
+    return {
+      id: row.id as string,
+      projectId: row.project_id as string,
+      currentStateSummary: analysis.currentStateSummary,
+      targetState: analysis.targetState,
+      gaps: analysis.gaps,
+      citationSources: analysis.citationSources,
+      createdAt: row.created_at as string,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Invalid JSON in gap analysis";
+    throw new Error(`Failed to parse gap analysis: ${errorMessage}`);
+  }
 }
 
 // POST /api/projects/:id/analysis - Run gap analysis with SSE
@@ -66,9 +83,7 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
   const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
   if (!project) {
     if (useSSE) {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
+      setSSEHeaders(res);
       sendSSE(res, { type: "error", code: "NOT_FOUND", message: "Project not found" });
       return res.end();
     }
@@ -76,12 +91,22 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
   }
 
   // Get brand brief
-  const brief = getBrandBrief(projectId);
+  let brief: BrandBrief | null;
+  try {
+    brief = getBrandBrief(projectId);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to load brand brief";
+    if (useSSE) {
+      setSSEHeaders(res);
+      sendSSE(res, { type: "error", code: "BRIEF_ERROR", message: errorMessage });
+      return res.end();
+    }
+    return res.status(500).json({ error: errorMessage, code: "BRIEF_ERROR" });
+  }
+
   if (!brief) {
     if (useSSE) {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
-      res.setHeader("Connection", "keep-alive");
+      setSSEHeaders(res);
       sendSSE(res, { type: "error", code: "NO_BRIEF", message: "No brand brief found for this project" });
       return res.end();
     }
@@ -90,9 +115,7 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
 
   if (useSSE) {
     // Set SSE headers
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
+    setSSEHeaders(res);
     res.flushHeaders();
 
     try {
@@ -219,8 +242,13 @@ router.get("/:id/analysis", (req: Request, res: Response) => {
     return res.status(404).json({ error: "No gap analysis found for this project", code: "NO_ANALYSIS" });
   }
 
-  const gapAnalysis = rowToGapAnalysis(row);
-  res.json(gapAnalysis);
+  try {
+    const gapAnalysis = rowToGapAnalysis(row);
+    res.json(gapAnalysis);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to parse gap analysis";
+    res.status(500).json({ error: errorMessage, code: "PARSE_ERROR" });
+  }
 });
 
 // GET /api/projects/:id/analysis/history - List past analyses
@@ -242,8 +270,13 @@ router.get("/:id/analysis/history", (req: Request, res: Response) => {
     )
     .all(projectId) as Array<Record<string, unknown>>;
 
-  const analyses: GapAnalysis[] = rows.map(rowToGapAnalysis);
-  res.json(analyses);
+  try {
+    const analyses: GapAnalysis[] = rows.map(rowToGapAnalysis);
+    res.json(analyses);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to parse gap analyses";
+    res.status(500).json({ error: errorMessage, code: "PARSE_ERROR" });
+  }
 });
 
 export default router;
