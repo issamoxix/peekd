@@ -171,6 +171,12 @@ export function useSSE<T>(url: string, options?: UseSSEOptions<T>): UseSSEResult
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // Create a stable key for options to avoid unnecessary re-renders
+  const optionsKey = JSON.stringify({
+    method: options?.method,
+    body: options?.body,
+  });
+
   const cancel = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -198,7 +204,11 @@ export function useSSE<T>(url: string, options?: UseSSEOptions<T>): UseSSEResult
       body: options?.body,
       signal: abortController.signal,
       onProgress: (event) => {
-        setProgress((prev) => [...prev, event]);
+        setProgress((prev) => {
+          const next = [...prev, event];
+          // Keep last 50 events to prevent memory bloat
+          return next.length > 50 ? next.slice(-50) : next;
+        });
         options?.onProgress?.(event);
       },
       onComplete: (data) => {
@@ -211,8 +221,17 @@ export function useSSE<T>(url: string, options?: UseSSEOptions<T>): UseSSEResult
         setIsRunning(false);
         options?.onError?.(err);
       },
+    }).catch((err) => {
+      if (!abortControllerRef.current?.signal.aborted) {
+        setError({
+          type: "error",
+          code: "FETCH_ERROR",
+          message: err instanceof Error ? err.message : "Unknown error",
+        });
+        setIsRunning(false);
+      }
     });
-  }, [url, options, cancel]);
+  }, [url, optionsKey, cancel]);
 
   // Cleanup on unmount
   useEffect(() => {

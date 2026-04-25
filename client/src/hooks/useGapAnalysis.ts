@@ -93,7 +93,11 @@ export function useRunAnalysis(): UseRunAnalysisResult {
         method: "POST",
         signal: abortController.signal,
         onProgress: (event) => {
-          setProgress((prev) => [...prev, event]);
+          setProgress((prev) => {
+            const next = [...prev, event];
+            // Keep last 20 events to prevent memory bloat
+            return next.length > 20 ? next.slice(-20) : next;
+          });
           callbacksRef.current?.onProgress?.(event);
         },
         onComplete: (data) => {
@@ -108,6 +112,15 @@ export function useRunAnalysis(): UseRunAnalysisResult {
           setIsRunning(false);
           callbacksRef.current?.onError?.(err);
         },
+      }).catch((err) => {
+        if (!abortControllerRef.current?.signal.aborted) {
+          setError({
+            type: "error",
+            code: "FETCH_ERROR",
+            message: err instanceof Error ? err.message : "Unknown error",
+          });
+          setIsRunning(false);
+        }
       });
     },
     [cancel, queryClient]
@@ -168,6 +181,14 @@ export function runAnalysisWithSSE(
     onProgress,
     onComplete,
     onError,
+  }).catch((err) => {
+    if (!abortController.signal.aborted) {
+      onError({
+        type: "error",
+        code: "FETCH_ERROR",
+        message: err instanceof Error ? err.message : "Unknown error",
+      });
+    }
   });
 
   // Return cancel function
