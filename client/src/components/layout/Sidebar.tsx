@@ -11,6 +11,7 @@ import {
   ListChecks,
   ScanSearch,
   FileText,
+  Bot,
 } from "lucide-react";
 
 const navItems = [
@@ -21,6 +22,7 @@ const navItems = [
   { to: "/competitors", icon: Building2, label: "Competitors" },
   { to: "/actions", icon: ListChecks, label: "Action Queue" },
   { to: "/crawlers", icon: ScanSearch, label: "Crawler Config" },
+  { to: "/agents", icon: Bot, label: "Peec AI Agents" },
   { to: "/analyzer", icon: FileText, label: "Brand Analyzer" },
   { to: "/settings", icon: SettingsIcon, label: "Settings" },
 ];
