@@ -1,0 +1,1 @@
+in the UI some texts are white while the background is also white fix them
