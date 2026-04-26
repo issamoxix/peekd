@@ -1,0 +1,64 @@
+{
+  "cli_version": "0.5.6",
+  "checkpoint_id": "b9a2ee1fea2c",
+  "session_id": "39e18028-4cff-4a1c-b7c0-09e9a7db214e",
+  "strategy": "manual-commit",
+  "created_at": "2026-04-26T12:43:56.682862Z",
+  "branch": "main",
+  "checkpoints_count": 0,
+  "files_touched": [
+    "backend/analyzer/package.json",
+    "package-lock.json"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-opus-4-7[1m]",
+  "turn_id": "00dadf674b93",
+  "checkpoint_transcript_start": 961,
+  "transcript_lines_at_start": 961,
+  "token_usage": {
+    "input_tokens": 22,
+    "cache_creation_tokens": 9812,
+    "cache_read_tokens": 2329081,
+    "output_tokens": 2885,
+    "api_call_count": 12
+  },
+  "session_metrics": {
+    "turn_count": 11
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-04-26T12:43:56.628838Z",
+    "agent_lines": 6,
+    "agent_removed": 6,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 6,
+    "total_lines_changed": 12,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 673,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".codex/agents/entire-search.toml": 23,
+        ".codex/hooks.json": 40,
+        ".cursor/hooks.json": 40,
+        ".factory/settings.json": 90,
+        ".gemini/agents/entire-search.md": 28,
+        ".gemini/settings.json": 141,
+        ".github/hooks/entire.json": 61,
+        ".opencode/plugins/entire.ts": 216,
+        "frontend/tsconfig.node.tsbuildinfo": 1,
+        "frontend/tsconfig.tsbuildinfo": 1,
+        "frontend/vite.config.d.ts": 3,
+        "frontend/vite.config.d.ts.map": 1,
+        "frontend/vite.config.js": 28
+      }
+    }
+  ]
+}
