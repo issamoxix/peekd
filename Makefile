@@ -1,32 +1,32 @@
-.PHONY: install dev dev-client dev-analyzer dev-sentinel dev-agents build clean
+.PHONY: install dev dev-frontend dev-analyzer dev-sentinel dev-agents build clean
 
 install:
 	npm install
-	cd sentinel-backend && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
-	cd backend && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+	cd backend/sentinel && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
+	cd backend/agents && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-# Run the full stack: client (5173) + analyzer Express (3001) + Sentinel FastAPI (8000) + Agents FastAPI (8001)
+# Run the full stack: frontend (5173) + analyzer Express (3001) + Sentinel FastAPI (8000) + Agents FastAPI (8001)
 dev:
-	npx concurrently -k -n client,analyzer,sentinel,agents -c blue,green,magenta,cyan \
-		"npm run dev -w client" \
-		"npm run dev -w server" \
-		"cd sentinel-backend && ./venv/bin/python main.py" \
-		"cd backend && ./venv/bin/uvicorn main:app --port 8001 --reload"
+	npx concurrently -k -n frontend,analyzer,sentinel,agents -c blue,green,magenta,cyan \
+		"npm run dev -w frontend" \
+		"npm run dev -w analyzer" \
+		"cd backend/sentinel && ./venv/bin/python main.py" \
+		"cd backend/agents && ./venv/bin/uvicorn main:app --port 8001 --reload"
 
-dev-client:
-	npm run dev -w client
+dev-frontend:
+	npm run dev -w frontend
 
 dev-analyzer:
-	npm run dev -w server
+	npm run dev -w analyzer
 
 dev-sentinel:
-	cd sentinel-backend && ./venv/bin/python main.py
+	cd backend/sentinel && ./venv/bin/python main.py
 
 dev-agents:
-	cd backend && ./venv/bin/uvicorn main:app --port 8001 --reload
+	cd backend/agents && ./venv/bin/uvicorn main:app --port 8001 --reload
 
 build:
 	npm run build
 
 clean:
-	rm -rf client/dist server/dist shared/dist
+	rm -rf frontend/dist backend/analyzer/dist backend/shared/dist
