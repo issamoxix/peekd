@@ -1,0 +1,11 @@
+you will work in this ADblume gap engine, and you gonna make it not only for Adblue, so basicaly rename it to Gap Engine , and let's the selected project & brand be that analysis, so bascilly not hardcoded
+
+---
+
+i have changed to voicari but i still see the data coming from jewlyer "Best jewelry product photography studio for ecommerce brands
+Medium
+" it should get the voicari if i selected voicari website
+
+---
+
+revert the changes from last convo
