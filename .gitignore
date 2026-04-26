@@ -4,6 +4,12 @@ __pycache__/
 .venv/
 .env
 
+# Frontend
+node_modules/
+.next/
+out/
+tsconfig.tsbuildinfo
+
 # Local Claude Code state
 .claude/
 
