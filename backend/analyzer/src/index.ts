@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { config } from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -17,6 +18,7 @@ config({ path: resolve(__dirname, "../../.env") });
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.use(helmet());
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 

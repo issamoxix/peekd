@@ -1,0 +1,80 @@
+HOW TO RUN PEEKD
+================
+
+Project root: /Users/issam/Desktop/bigHack
+
+
+ONE-TIME SETUP (only the first time, or after pulling new deps)
+---------------------------------------------------------------
+Where: project root (/Users/issam/Desktop/bigHack)
+
+    make install
+
+This installs:
+  - npm workspaces (frontend, analyzer, shared)
+  - backend/sentinel  Python venv + requirements
+  - backend/agents    Python venv + requirements
+
+Required env files (create these before running):
+  - backend/sentinel/.env       (see backend/sentinel/.env.example)
+  - backend/agents/.env         (needs ANTHROPIC_API_KEY, PEEC_API_KEY)
+  - backend/analyzer/.env       (Claude key for analyzer)
+
+
+RUN EVERYTHING AT ONCE (recommended)
+------------------------------------
+Where: project root (/Users/issam/Desktop/bigHack)
+
+    make dev
+
+Starts all four services in one terminal with color-coded logs:
+  - frontend  Vite          http://localhost:5173
+  - analyzer  Express       http://localhost:3001
+  - sentinel  FastAPI       http://localhost:8000
+  - agents    FastAPI       http://localhost:8001
+
+Open the app at:  http://localhost:5173
+
+
+RUN SERVICES INDIVIDUALLY (in separate terminals)
+-------------------------------------------------
+
+1) Frontend (Vite, port 5173)
+   Where: project root
+       make dev-frontend
+   or:
+       npm run dev -w frontend
+
+2) Analyzer (Express, port 3001)
+   Where: project root
+       make dev-analyzer
+   or:
+       npm run dev -w analyzer
+
+3) Sentinel (FastAPI reputation backend, port 8000)
+   Where: project root
+       make dev-sentinel
+   or, manually:
+       cd backend/sentinel
+       ./venv/bin/python main.py
+
+4) Agents (FastAPI Peec Agents, port 8001)
+   Where: project root
+       make dev-agents
+   or, manually:
+       cd backend/agents
+       ./venv/bin/uvicorn main:app --port 8001 --reload
+
+
+BUILD FOR PRODUCTION
+--------------------
+Where: project root
+
+    make build
+
+
+CLEAN BUILD ARTIFACTS
+---------------------
+Where: project root
+
+    make clean
