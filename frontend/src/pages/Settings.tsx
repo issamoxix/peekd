@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { Check, Loader, AlertCircle, Wifi, Building2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { writeSelection } from '../lib/selection'
 
 interface Config {
   company_name: string; project_id: string; brand_id: string
@@ -58,7 +59,22 @@ export default function Settings() {
     enabled: !!currentProjectId,
   })
 
-  useEffect(() => { if (config) setForm(config) }, [config])
+  useEffect(() => {
+    if (config) {
+      setForm(config)
+      // Hydrate localStorage from backend config on first load if empty,
+      // so a fresh tab still knows the active selection without re-picking.
+      const existing = localStorage.getItem('peekd:selection')
+      if (!existing && config.project_id && config.brand_id) {
+        writeSelection({
+          projectId: config.project_id,
+          brandId: config.brand_id,
+          projectName: '',
+          brandName: config.company_name || '',
+        })
+      }
+    }
+  }, [config])
 
   // Auto-fill company name from the selected brand
   useEffect(() => {
@@ -69,7 +85,22 @@ export default function Settings() {
 
   const save = useMutation({
     mutationFn: (data: Partial<Config>) => axios.post('/api/settings/configure', data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['config'] }); qc.invalidateQueries({ queryKey: ['dashboard'] }) },
+    onSuccess: (_resp, vars) => {
+      // mirror the saved selection to localStorage so the banner + Agents page
+      // update without waiting on a backend round-trip
+      const projectId = vars.project_id ?? form.project_id ?? config?.project_id ?? ''
+      const brandId = vars.brand_id ?? form.brand_id ?? config?.brand_id ?? ''
+      const projects = qc.getQueryData<Project[]>(['projects']) ?? []
+      const brandList = qc.getQueryData<Brand[]>(['brands', projectId]) ?? brands ?? []
+      writeSelection({
+        projectId,
+        brandId,
+        projectName: projects.find(p => p.id === projectId)?.name ?? '',
+        brandName: brandList.find(b => b.id === brandId)?.name ?? selectedBrandName ?? '',
+      })
+      qc.invalidateQueries({ queryKey: ['config'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
   })
   const createTopic = useMutation({
     mutationFn: async () => {

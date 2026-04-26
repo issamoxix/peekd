@@ -113,12 +113,8 @@ const TABS: { id: Tab; label: string; icon: string; hint: string }[] = [
 ];
 
 export default function Agents() {
-  const { projectId, brandId, brandName, isConfigured, isLoading } = useCurrentSelection();
+  const { projectId, brandId, brandName, isConfigured } = useCurrentSelection();
   const [tab, setTab] = useState<Tab>("prompts");
-
-  if (isLoading) {
-    return <div className="text-muted text-sm">Loading workspace…</div>;
-  }
 
   if (!isConfigured) {
     return (

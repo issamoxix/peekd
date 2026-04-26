@@ -1,60 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { useSyncExternalStore } from "react";
+import { readSelection, subscribeSelection, type Selection } from "../lib/selection";
 
-interface SettingsConfig {
-  company_name: string;
-  project_id: string;
-  brand_id: string;
-}
-
-interface Brand {
-  id: string;
-  name: string;
-  domain?: string;
-  domains?: string[];
-  is_own?: boolean;
-}
-
-export interface CurrentSelection {
-  projectId: string;
-  brandId: string;
-  brandName: string;
-  companyName: string;
+export interface CurrentSelection extends Selection {
   isConfigured: boolean;
-  isLoading: boolean;
 }
 
 /**
- * Single source of truth for the active Peec project + brand.
- * Backed by /api/settings/config (configured on the Settings page).
- * Pages should read from here instead of maintaining their own dropdowns.
+ * Single source of truth for the active Peec project + brand, persisted in
+ * localStorage. The Settings page is the only place that should write it.
+ * Reads sync across all subscribers via a custom event + the storage event.
  */
 export function useCurrentSelection(): CurrentSelection {
-  const { data: config, isLoading: loadingConfig } = useQuery<SettingsConfig>({
-    queryKey: ["settings", "config"],
-    queryFn: async () => (await axios.get("/api/settings/config")).data,
-    staleTime: 30_000,
-  });
-
-  const projectId = config?.project_id ?? "";
-  const brandId = config?.brand_id ?? "";
-
-  const { data: brands, isLoading: loadingBrands } = useQuery<Brand[]>({
-    queryKey: ["settings", "brands", projectId],
-    queryFn: async () =>
-      (await axios.get(`/api/settings/brands/${projectId}`)).data,
-    enabled: !!projectId,
-    staleTime: 30_000,
-  });
-
-  const brandName = brands?.find((b) => b.id === brandId)?.name ?? "";
-
+  const selection = useSyncExternalStore(subscribeSelection, readSelection, readSelection);
   return {
-    projectId,
-    brandId,
-    brandName,
-    companyName: config?.company_name ?? "",
-    isConfigured: Boolean(projectId && brandId),
-    isLoading: loadingConfig || loadingBrands,
+    ...selection,
+    isConfigured: Boolean(selection.projectId && selection.brandId),
   };
 }

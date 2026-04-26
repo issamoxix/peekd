@@ -3,16 +3,8 @@ import { Building2, Settings as SettingsIcon, AlertCircle } from "lucide-react";
 import { useCurrentSelection } from "../../hooks/useCurrentSelection";
 
 export function SelectionBanner() {
-  const { projectId, brandName, companyName, isConfigured, isLoading } =
+  const { projectId, brandName, projectName, isConfigured } =
     useCurrentSelection();
-
-  if (isLoading) {
-    return (
-      <div className="mb-6 rounded-lg border border-soft-line bg-panel/60 px-4 py-2.5 text-xs text-muted">
-        Loading workspace…
-      </div>
-    );
-  }
 
   if (!isConfigured) {
     return (
@@ -38,7 +30,7 @@ export function SelectionBanner() {
             Project
           </span>
           <span className="font-medium text-ink">
-            {companyName || projectId.slice(0, 12)}
+            {projectName || projectId.slice(0, 12)}
           </span>
         </span>
         <span className="text-line">·</span>
