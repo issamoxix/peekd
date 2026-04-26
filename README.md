@@ -98,7 +98,17 @@ The frontend will start on **http://localhost:5173**
 - Opportunity identification
 - Content sprint recommendations
 
-### 5. **Crawler Configuration**
+### 5. **AI Heatmap**
+- Model × prompt performance grid
+- Visibility and sentiment breakdown per AI model
+- Identify which models mention your brand most/least
+
+### 6. **GEO — Generative Engine Optimization**
+- AI-optimised content pages readable by LLM crawlers
+- Auto-generate brand overviews, FAQ pages, and comparison pages
+- Structured for retrieval by ChatGPT, Perplexity, Gemini, and others
+
+### 7. **Crawler Configuration**
 - Smart robots.txt generator
 - Sitemap strategy recommendations
 - Cloudflare WAF rules
@@ -107,7 +117,7 @@ The frontend will start on **http://localhost:5173**
   - Allow AI retrieval bots
   - Control sensitive paths
 
-### 6. **Background Automation**
+### 8. **Background Automation**
 - Scans every 2 hours
 - Auto-threat detection
 - Action queue refresh
@@ -127,6 +137,14 @@ The frontend will start on **http://localhost:5173**
 ### Actions
 - `GET /api/actions` - List action queue
 - `PATCH /api/actions/{id}` - Update status
+
+### Heatmap
+- `GET /api/heatmap` - Model × prompt performance grid
+
+### AI Content (GEO)
+- `POST /api/ai-content/brand-overview` - Generate brand overview page
+- `POST /api/ai-content/faq` - Generate FAQ page
+- `POST /api/ai-content/comparison` - Generate competitor comparison page
 
 ### Crawlers
 - `GET /api/crawlers/robots` - Get robots.txt
@@ -157,21 +175,26 @@ sentinel/
 │   ├── engines/                   # Core logic
 │   │   ├── threat_engine.py
 │   │   ├── action_engine.py
-│   │   └── competitor_engine.py
+│   │   ├── competitor_engine.py
+│   │   ├── ai_engine.py           # GEO content engine
+│   │   └── live_signals.py        # Real-time signal processing
 │   │
 │   ├── services/
 │   │   ├── claude_service.py      # AI threat analysis
+│   │   ├── ai_content_service.py  # GEO page generation
 │   │   ├── scheduler.py           # Background jobs
 │   │   ├── alert_service.py       # SSE broadcaster
 │   │   └── crawler_config.py      # robots.txt generator
 │   │
 │   └── routers/                   # API endpoints
 │       ├── dashboard.py
+│       ├── heatmap.py
 │       ├── threats.py
 │       ├── actions.py
 │       ├── competitors.py
 │       ├── crawlers.py
 │       ├── alerts.py
+│       ├── ai_content.py
 │       └── settings.py
 │
 └── frontend/
@@ -179,8 +202,17 @@ sentinel/
     │   ├── main.tsx
     │   ├── App.tsx
     │   ├── pages/
-    │   │   └── Dashboard.tsx      # Main dashboard view
-    │   └── index.css              # Tailwind styles
+    │   │   ├── Dashboard.tsx
+    │   │   ├── ThreatCenter.tsx
+    │   │   ├── ActionQueue.tsx
+    │   │   ├── Competitors.tsx
+    │   │   ├── HeatMap.tsx
+    │   │   ├── AIContent.tsx
+    │   │   ├── CrawlerConfig.tsx
+    │   │   └── Settings.tsx
+    │   ├── components/
+    │   │   └── layout/Sidebar.tsx
+    │   └── index.css
     └── package.json
 ```
 
