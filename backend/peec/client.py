@@ -71,7 +71,7 @@ class PeecClient:
             return projects
         except PeecAPIError as e:
             print(f"[peec] list_projects failed: {e}")
-            return [Project(id="demo-project-1", name="Demo Project (offline)", status="DEMO")]
+            raise
 
     async def list_brands(self, project_id: str) -> List[Brand]:
         cached = peec_cache.get("list_brands", project_id=project_id)
@@ -94,7 +94,7 @@ class PeecClient:
             return brands
         except PeecAPIError as e:
             print(f"[peec] list_brands failed: {e}")
-            return [Brand(id="demo-brand-1", name="Demo Brand", domain="example.com", is_own=True)]
+            raise
 
     async def list_prompts(self, project_id: str) -> List[Prompt]:
         cached = peec_cache.get("list_prompts", project_id=project_id)
@@ -150,6 +150,42 @@ class PeecClient:
         except PeecAPIError as e:
             print(f"[peec] list_topics failed: {e}")
             return []
+
+    async def create_topic(self, project_id: str, name: str) -> Topic:
+        data = await self._request(
+            "POST",
+            "/topics",
+            params={"project_id": project_id},
+            json={"name": name[:64]},
+        )
+        # Response is just {"id": "to_..."} — not a full object
+        item = data.get("data") or data
+        return Topic(id=item["id"], label=name)
+
+    async def create_prompt(self, project_id: str, message: str, topic_id: Optional[str] = None,
+                            country_code: str = "US") -> Prompt:
+        # Peec API requires: text (str, max 200), country_code (enum), optional topic_id
+        payload: Dict[str, Any] = {
+            "text": message[:200],
+            "country_code": country_code,
+        }
+        if topic_id:
+            payload["topic_id"] = topic_id
+        data = await self._request(
+            "POST",
+            "/prompts",
+            params={"project_id": project_id},
+            json=payload,
+        )
+        # Response is just {"id": "pr_...", "warning": "..."} — not a full object
+        item = data.get("data") or data
+        return Prompt(
+            id=item["id"],
+            message=message,
+            tags=[],
+            topics=[topic_id] if topic_id else [],
+            search_volume=item.get("volume"),
+        )
 
     async def list_models(self, project_id: str) -> List[Model]:
         cached = peec_cache.get("list_models", project_id=project_id)
@@ -245,11 +281,17 @@ class PeecClient:
         start_date: str,
         end_date: str,
         brand_id: Optional[str] = None,
+        prompt_ids: Optional[List[str]] = None,
     ) -> BrandsReport:
         try:
             filters = None
+            parts = []
             if brand_id:
-                filters = [{"field": "brand_id", "operator": "in", "values": [brand_id]}]
+                parts.append({"field": "brand_id", "operator": "in", "values": [brand_id]})
+            if prompt_ids:
+                parts.append({"field": "prompt_id", "operator": "in", "values": prompt_ids})
+            if parts:
+                filters = parts
             data = await self._post_report("/reports/brands", project_id, dimensions, start_date, end_date, filters)
             metrics = []
             for item in data.get("data", []):
@@ -271,7 +313,7 @@ class PeecClient:
             return BrandsReport(data=metrics, dimensions=dimensions)
         except PeecAPIError as e:
             print(f"[peec] get_brands_report failed: {e}")
-            return _mock_brands_report(dimensions)
+            raise
 
     async def get_domains_report(
         self,
@@ -295,7 +337,7 @@ class PeecClient:
             return DomainsReport(data=metrics, dimensions=dimensions)
         except PeecAPIError as e:
             print(f"[peec] get_domains_report failed: {e}")
-            return _mock_domains_report(dimensions)
+            raise
 
     async def get_urls_report(
         self,
@@ -319,81 +361,7 @@ class PeecClient:
             return UrlsReport(data=metrics, dimensions=dimensions)
         except PeecAPIError as e:
             print(f"[peec] get_urls_report failed: {e}")
-            return _mock_urls_report(dimensions)
-
-
-_DEMO_MODEL_METRICS = [
-    ("chatgpt", 0.81, 71.5, 1.6),
-    ("perplexity", 0.64, 58.0, 2.4),
-    ("gemini", 0.55, 63.0, 3.1),
-    ("claude", 0.78, 74.0, 1.9),
-    ("copilot", 0.49, 60.5, 3.6),
-    ("grok", 0.41, 52.0, 4.2),
-]
-
-_DEMO_PROMPT_METRICS = [
-    ("prompt-1", "best alternatives to industry leader", 0.72, 66.0),
-    ("prompt-2", "is the brand reliable", 0.58, 49.0),
-    ("prompt-3", "comparison of top vendors", 0.81, 70.0),
-    ("prompt-4", "common complaints about the brand", 0.43, 38.0),
-    ("prompt-5", "pricing breakdown", 0.69, 62.0),
-    ("prompt-6", "customer support quality", 0.55, 54.0),
-]
-
-
-def _mock_brands_report(dimensions: List[str]) -> BrandsReport:
-    """Demo fallback when the API is unreachable."""
-    if "model_id" in dimensions:
-        return BrandsReport(
-            data=[
-                BrandMetric(brand_id="demo-brand-1", brand_name="Demo Brand",
-                            visibility=v, sentiment=s, position=p, model_id=mid)
-                for mid, v, s, p in _DEMO_MODEL_METRICS
-            ],
-            dimensions=dimensions,
-        )
-    if "prompt_id" in dimensions:
-        return BrandsReport(
-            data=[
-                BrandMetric(brand_id="demo-brand-1", brand_name="Demo Brand",
-                            visibility=v, sentiment=s, position=2.5, prompt_id=pid)
-                for pid, _label, v, s in _DEMO_PROMPT_METRICS
-            ],
-            dimensions=dimensions,
-        )
-    return BrandsReport(
-        data=[BrandMetric(brand_id="demo-brand-1", brand_name="Demo Brand",
-                          visibility=0.62, sentiment=63.0, position=2.5)],
-        dimensions=dimensions,
-    )
-
-
-def _mock_domains_report(dimensions: List[str]) -> DomainsReport:
-    return DomainsReport(
-        data=[
-            DomainMetric(domain="yourbrand.com", usage_rate=0.32, citation_avg=0.41, classification="OWN"),
-            DomainMetric(domain="g2.com", usage_rate=0.28, citation_avg=0.71, classification="EDITORIAL"),
-            DomainMetric(domain="reddit.com", usage_rate=0.21, citation_avg=0.55, classification="UGC"),
-            DomainMetric(domain="techcrunch.com", usage_rate=0.18, citation_avg=0.62, classification="EDITORIAL"),
-            DomainMetric(domain="wikipedia.org", usage_rate=0.15, citation_avg=0.83, classification="REFERENCE"),
-            DomainMetric(domain="competitor-a.com", usage_rate=0.34, citation_avg=0.78, classification="COMPETITOR"),
-            DomainMetric(domain="competitor-b.com", usage_rate=0.22, citation_avg=0.66, classification="COMPETITOR"),
-        ],
-        dimensions=dimensions,
-    )
-
-
-def _mock_urls_report(dimensions: List[str]) -> UrlsReport:
-    return UrlsReport(
-        data=[
-            UrlMetric(url="https://g2.com/categories/x-software", domain="g2.com", usage_count=42, citation_count=31, classification="LISTICLE", title="Top X Software"),
-            UrlMetric(url="https://reddit.com/r/x/comments/abc", domain="reddit.com", usage_count=28, citation_count=14, classification="DISCUSSION", title="Honest review"),
-            UrlMetric(url="https://techcrunch.com/2024/x-comparison", domain="techcrunch.com", usage_count=22, citation_count=18, classification="ARTICLE", title="X vs competitors"),
-            UrlMetric(url="https://wikipedia.org/wiki/Industry", domain="wikipedia.org", usage_count=19, citation_count=24, classification="ARTICLE", title="Industry overview"),
-            UrlMetric(url="https://competitor-a.com/features", domain="competitor-a.com", usage_count=37, citation_count=29, classification="PRODUCT_PAGE", title="Competitor A features"),
-        ],
-        dimensions=dimensions,
-    )
+            raise
 
 
 peec_client = PeecClient()

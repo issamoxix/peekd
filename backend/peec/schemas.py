@@ -44,6 +44,19 @@ class Topic(BaseModel):
     label: str
 
 
+class TopicCreate(BaseModel):
+    """Create topic payload"""
+    project_id: str
+    name: str
+
+
+class PromptCreate(BaseModel):
+    """Create prompt payload"""
+    project_id: str
+    message: str
+    topic_id: Optional[str] = None
+
+
 class Model(BaseModel):
     """AI Model from Peec API"""
     id: str

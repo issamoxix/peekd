@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { Grid3X3, Building2 } from 'lucide-react'
 import { useState } from 'react'
+import { resolvePromptText } from '../utils/text'
 
 interface HeatmapData {
   company_name: string
@@ -127,41 +128,53 @@ export default function HeatMap() {
             })}
           </div>
 
-          {/* Heat Map Grid */}
+          {/* Heat Map Grid — prompts as rows, models as columns */}
           <div className="bg-gray-900 rounded-xl border border-gray-800 p-6 overflow-x-auto">
-            <h2 className="text-lg font-semibold text-white mb-4">Model × Prompt Grid</h2>
-            <table className="w-full">
+            <h2 className="text-lg font-semibold text-white mb-4">Prompt × Model Grid</h2>
+            <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr>
-                  <th className="text-left text-xs text-gray-400 font-medium p-2 w-32">Model</th>
-                  {promptIds.slice(0, 15).map(pid => (
-                    <th key={pid} className="text-center text-[10px] text-gray-500 font-normal p-1 max-w-[80px]">
-                      <div className="truncate" style={{ maxWidth: '80px' }}>{promptMap.get(pid) || pid}</div>
+                  <th className="text-left text-xs text-gray-400 font-medium p-2 w-0 min-w-[300px] max-w-[400px]">
+                    Reputation Prompt
+                  </th>
+                  {models.map(m => (
+                    <th key={m} className="text-center text-xs text-gray-300 font-semibold p-2 capitalize min-w-[80px]">
+                      {modelDisplayNames[m] || m}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {models.map(m => (
-                  <tr key={m}>
-                    <td className="text-sm text-gray-300 font-medium p-2 capitalize">{modelDisplayNames[m] || m}</td>
-                    {promptIds.slice(0, 15).map(pid => {
-                      const cell = gridLookup[m]?.[pid]
-                      const val = cell ? (metric === 'visibility' ? cell.visibility : cell.sentiment / 100) : 0
-                      const isHovered = hoveredCell?.model === m && hoveredCell?.prompt === pid
-                      return (
-                        <td key={pid} className="p-1"
-                          onMouseEnter={() => setHoveredCell({ model: m, prompt: pid })}
-                          onMouseLeave={() => setHoveredCell(null)}>
-                          <div className={`w-full h-10 rounded-md flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-all ${isHovered ? 'ring-2 ring-white scale-110 z-10' : ''}`}
-                            style={{ backgroundColor: getHeatBg(val), minWidth: '48px' }}>
-                            {cell ? (metric === 'visibility' ? `${(cell.visibility * 100).toFixed(0)}` : cell.sentiment.toFixed(0)) : '—'}
-                          </div>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
+                {promptIds.slice(0, 15).map((pid, idx) => {
+                  const label = resolvePromptText(promptMap.get(pid) || pid)
+                  return (
+                    <tr key={pid} className="group">
+                      <td className="py-1 pr-4 text-xs text-gray-300 align-middle">
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-600 font-mono flex-shrink-0 mt-0.5">{idx + 1}.</span>
+                          <span className="leading-snug line-clamp-2 group-hover:text-white transition-colors">{label}</span>
+                        </div>
+                      </td>
+                      {models.map(m => {
+                        const cell = gridLookup[m]?.[pid]
+                        const val = cell ? (metric === 'visibility' ? cell.visibility : cell.sentiment / 100) : 0
+                        const isHovered = hoveredCell?.model === m && hoveredCell?.prompt === pid
+                        return (
+                          <td key={m} className="p-1 text-center"
+                            onMouseEnter={() => setHoveredCell({ model: m, prompt: pid })}
+                            onMouseLeave={() => setHoveredCell(null)}>
+                            <div
+                              className={`h-9 rounded-md flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-all ${isHovered ? 'ring-2 ring-white scale-105' : ''}`}
+                              style={{ backgroundColor: getHeatBg(val), minWidth: '56px' }}
+                            >
+                              {cell ? (metric === 'visibility' ? `${(cell.visibility * 100).toFixed(0)}%` : cell.sentiment.toFixed(0)) : '—'}
+                            </div>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -171,7 +184,7 @@ export default function HeatMap() {
             <div className="fixed bottom-6 right-6 bg-gray-800 border border-gray-700 rounded-xl p-4 shadow-2xl z-50 min-w-[200px]">
               <div className="text-sm font-bold text-white capitalize mb-2">{modelDisplayNames[hoveredCell.model] || hoveredCell.model}</div>
               <div className="text-xs text-gray-400 mb-2 truncate" style={{ maxWidth: '250px' }}>
-                {promptMap.get(hoveredCell.prompt) || hoveredCell.prompt}
+                {resolvePromptText(promptMap.get(hoveredCell.prompt) || hoveredCell.prompt)}
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><span className="text-gray-500">Visibility:</span> <span className="text-white font-bold">{(gridLookup[hoveredCell.model][hoveredCell.prompt].visibility * 100).toFixed(1)}%</span></div>

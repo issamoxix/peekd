@@ -1,13 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { 
-  Shield, AlertTriangle, TrendingUp, Activity, 
-  Eye, Zap, ArrowUpRight, ArrowDownRight 
+import { cleanText } from '../utils/text'
+import {
+  Shield, AlertTriangle, TrendingUp, Activity,
+  Eye, Target, Filter, AlertCircle
 } from 'lucide-react'
 
 interface DashboardData {
   configured: boolean
   company_name?: string
+  project_id?: string
+  brand_id?: string
+  reputation_prompts_active?: boolean
+  reputation_prompts_count?: number
   brand_visibility?: number
   sentiment_score?: number
   visibility_trend?: string
@@ -16,6 +21,9 @@ interface DashboardData {
   top_models?: Array<{ model: string; visibility: number; sentiment: number }>
   recent_threats?: Array<{ id: string; severity: string; type: string; model: string; summary: string; detected_at: string }>
   action_queue_count?: number
+  security_topic_enabled?: boolean
+  competitor_events?: Array<{ id: string; competitor_name: string; event_type: string; opportunity_score: number; detected_at: string }>
+  narrative_shift_tracker?: { tracked_keywords: number; target_sentiment_delta: number; target_positive_mentions_delta_pct: number }
 }
 
 const modelColors: Record<string, string> = {
@@ -63,6 +71,19 @@ export default function Dashboard() {
         <p className="text-gray-400 text-sm mt-1">
           {d.company_name ? `Monitoring ${d.company_name} across AI models` : 'Real-time brand monitoring across AI models'}
         </p>
+
+        {/* Filter context */}
+        {d.reputation_prompts_active ? (
+          <div className="flex items-center gap-2 mt-3 text-xs text-blue-300 bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2 w-fit">
+            <Filter className="w-3.5 h-3.5" />
+            Showing threats scoped to <span className="font-semibold">{d.reputation_prompts_count} reputation risk questions</span> for this project
+          </div>
+        ) : d.project_id ? (
+          <div className="flex items-center gap-2 mt-3 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded-lg px-3 py-2 w-fit">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Showing all prompts — go to <a href="/settings" className="underline font-semibold">Settings</a> and select your project to load reputation risk questions
+          </div>
+        ) : null}
       </div>
 
       {/* KPI Cards */}
@@ -70,7 +91,7 @@ export default function Dashboard() {
         <KPICard icon={Eye} label="Brand Visibility" value={d.brand_visibility ? `${(d.brand_visibility * 100).toFixed(1)}%` : '—'} trend={d.visibility_trend} color="blue" />
         <KPICard icon={Activity} label="Sentiment Score" value={d.sentiment_score ? `${d.sentiment_score.toFixed(1)}` : '—'} trend={d.sentiment_trend} color={d.sentiment_score && d.sentiment_score >= 65 ? 'green' : d.sentiment_score && d.sentiment_score >= 45 ? 'yellow' : 'red'} />
         <KPICard icon={AlertTriangle} label="Active Threats" value={String(totalThreats)} trend={d.active_threats?.critical ? `${d.active_threats.critical} critical` : 'No critical'} color="red" />
-        <KPICard icon={Zap} label="Action Queue" value={String(d.action_queue_count ?? 0)} trend="pending actions" color="purple" />
+        <KPICard icon={Target} label="Top Opportunities" value={String(d.competitor_events?.length ?? 0)} trend="competitor displacements" color="purple" />
       </div>
 
       {/* Threat Breakdown + Models */}
@@ -128,7 +149,7 @@ export default function Dashboard() {
               <div key={t.id} className="flex items-center gap-4 p-3 bg-gray-800/50 rounded-lg">
                 <span className={`px-2 py-1 rounded text-xs font-bold text-white ${severityColors[t.severity]}`}>{t.severity}</span>
                 <span className={`px-2 py-0.5 rounded text-xs ${modelColors[t.model] || 'bg-gray-600'} text-white capitalize`}>{t.model}</span>
-                <span className="text-sm text-gray-300 flex-1 truncate">{t.summary}</span>
+                <span className="text-sm text-gray-300 flex-1 truncate">{cleanText(t.summary, d.company_name || '')}</span>
                 <span className="text-xs text-gray-500">{t.type}</span>
               </div>
             ))}
@@ -138,10 +159,33 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Competitor Opportunities */}
+      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Competitor Opportunities</h2>
+        {d.competitor_events && d.competitor_events.length > 0 ? (
+          <div className="space-y-3">
+            {d.competitor_events.map(e => (
+              <div key={e.id} className="flex items-center justify-between gap-4 p-3 bg-gray-800/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-white">{e.competitor_name}</p>
+                  <p className="text-xs text-gray-500">{e.event_type.replace('_', ' ')}</p>
+                </div>
+                <span className="text-sm font-semibold text-green-400">{(e.opportunity_score * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">No competitor opportunities detected yet.</p>
+        )}
+      </div>
+
       {/* Status */}
       <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center gap-3">
         <Shield className="w-5 h-5 text-blue-400" />
-        <p className="text-blue-300 text-sm">Sentinel is actively monitoring your brand across ChatGPT, Perplexity, Gemini, Claude, Copilot, and Grok.</p>
+        <p className="text-blue-300 text-sm">
+          Sentinel is actively monitoring your brand across major AI models.
+          {d.security_topic_enabled ? ' Security-topic filtering is enabled.' : ' Security-topic filtering is currently off.'}
+        </p>
       </div>
     </div>
   )

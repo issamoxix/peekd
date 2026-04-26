@@ -1,64 +1,28 @@
 """
-Actions Router
+Actions Router — Anthropic-powered live action queue derived from real Peec data.
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
-from pydantic import BaseModel
-from datetime import datetime
 import json
 
 from database import get_db
-from models import Action
+from models import AppConfig
+from engines.live_signals import detect_threats, detect_competitor_events
+from engines.ai_engine import generate_action_queue
 
 router = APIRouter()
 
 
-class ActionResponse(BaseModel):
-    """Action response model"""
-    id: str
-    project_id: str
-    brand_id: str
-    category: str
-    opportunity_score: float
-    opportunity_level: str
-    domain: str
-    title: str
-    rationale: str
-    competitor_presence: list
-    keywords: list
-    status: str
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
-    
-    @classmethod
-    def from_orm(cls, obj):
-        """Custom from_orm to parse JSON fields"""
-        data = {
-            "id": obj.id,
-            "project_id": obj.project_id,
-            "brand_id": obj.brand_id,
-            "category": obj.category,
-            "opportunity_score": obj.opportunity_score,
-            "opportunity_level": obj.opportunity_level,
-            "domain": obj.domain,
-            "title": obj.title,
-            "rationale": obj.rationale,
-            "competitor_presence": json.loads(obj.competitor_presence) if obj.competitor_presence else [],
-            "keywords": json.loads(obj.keywords) if obj.keywords else [],
-            "status": obj.status,
-            "created_at": obj.created_at,
-            "updated_at": obj.updated_at
-        }
-        return cls(**data)
-
-
-class ActionUpdate(BaseModel):
-    """Action update request"""
-    status: Optional[str] = None
+def _security_prompt_ids(config: AppConfig) -> Optional[list]:
+    """Always scope to the project's configured reputation prompts when present."""
+    if not config or not config.custom_prompt_ids:
+        return None
+    try:
+        parsed = json.loads(config.custom_prompt_ids)
+        return parsed if isinstance(parsed, list) and parsed else None
+    except Exception:
+        return None
 
 
 @router.get("/actions")
@@ -67,63 +31,34 @@ async def list_actions(
     status: Optional[str] = "PENDING",
     limit: int = Query(50, le=200),
     offset: int = 0,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ) -> dict:
-    """List actions with filters"""
-    query = db.query(Action)
-    
+    """Live action queue — Anthropic-generated from real threats and competitor events."""
+    config = db.query(AppConfig).filter(AppConfig.id == 1).first()
+    if not config or not config.project_id or not config.brand_id:
+        return {"total": 0, "limit": limit, "offset": offset, "data": []}
+
+    prompt_ids = _security_prompt_ids(config)
+    brand = config.company_name or "your brand"
+
+    threats = await detect_threats(
+        config.project_id, config.brand_id, brand, prompt_ids=prompt_ids
+    )
+    competitors = await detect_competitor_events(
+        config.project_id, config.brand_id, brand, prompt_ids=prompt_ids
+    )
+
+    actions = await generate_action_queue(brand, threats, competitors)
+
     if category:
-        query = query.filter(Action.category == category)
-    if status:
-        query = query.filter(Action.status == status)
-    
-    # Get total count
-    total = query.count()
-    
-    # Get paginated results sorted by opportunity score
-    actions = query.order_by(Action.opportunity_score.desc()).limit(limit).offset(offset).all()
-    
-    return {
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-        "data": [ActionResponse.from_orm(a) for a in actions]
-    }
+        actions = [a for a in actions if a.get("category") == category]
 
-
-@router.get("/actions/{action_id}")
-async def get_action(
-    action_id: str,
-    db: Session = Depends(get_db)
-) -> ActionResponse:
-    """Get action detail"""
-    action = db.query(Action).filter(Action.id == action_id).first()
-    
-    if not action:
-        raise HTTPException(status_code=404, detail="Action not found")
-    
-    return ActionResponse.from_orm(action)
+    total = len(actions)
+    page = actions[offset : offset + limit]
+    return {"total": total, "limit": limit, "offset": offset, "data": page}
 
 
 @router.patch("/actions/{action_id}")
-async def update_action(
-    action_id: str,
-    update: ActionUpdate,
-    db: Session = Depends(get_db)
-) -> dict:
-    """Update action status"""
-    action = db.query(Action).filter(Action.id == action_id).first()
-    
-    if not action:
-        raise HTTPException(status_code=404, detail="Action not found")
-    
-    if update.status:
-        action.status = update.status
-        action.updated_at = datetime.utcnow()
-    
-    db.commit()
-    
-    return {
-        "status": "success",
-        "message": "Action updated successfully"
-    }
+async def update_action(action_id: str, update: dict, db: Session = Depends(get_db)) -> dict:
+    """Accept status updates (client-side state only — live actions are not DB-persisted)."""
+    return {"status": "success", "message": "Action status noted"}

@@ -98,3 +98,6 @@ class AppConfig(Base):
     sentiment_drop_threshold = Column(Float, default=10.0)
     min_sentiment_alert = Column(Float, default=45.0)
     scan_frequency_hours = Column(Integer, default=1)
+    security_topic_enabled = Column(Boolean, default=False)
+    security_topic_id = Column(String, nullable=True)
+    custom_prompt_ids = Column(Text, nullable=True)  # JSON array of prompt ids

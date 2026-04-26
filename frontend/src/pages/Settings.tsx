@@ -7,14 +7,20 @@ interface Config {
   company_name: string; project_id: string; brand_id: string
   alert_email: string; sentiment_drop_threshold: number
   min_sentiment_alert: number; scan_frequency_hours: number
+  security_topic_enabled: boolean; security_topic_id: string
+  custom_prompt_ids: string[]
 }
 interface Project { id: string; name: string; status?: string }
 interface Brand { id: string; name: string; domain?: string; is_own?: boolean }
+interface Topic { id: string; label: string }
+interface Prompt { id: string; message: string; topics?: string[] }
 
 export default function Settings() {
   const qc = useQueryClient()
   const [form, setForm] = useState<Partial<Config>>({})
   const [testResult, setTestResult] = useState<{ status: string; message: string } | null>(null)
+  const [newTopicName, setNewTopicName] = useState('')
+  const [newPromptMessage, setNewPromptMessage] = useState('')
 
   const { data: config } = useQuery<Config>({
     queryKey: ['config'],
@@ -33,12 +39,87 @@ export default function Settings() {
     },
     enabled: !!(form.project_id || config?.project_id),
   })
+  const selectedBrandName = (brands ?? []).find(b => b.id === form.brand_id)?.name
+  const currentProjectId = form.project_id || config?.project_id
+  const { data: topics } = useQuery<Topic[]>({
+    queryKey: ['topics', currentProjectId],
+    queryFn: async () => {
+      if (!currentProjectId) return []
+      return (await axios.get(`/api/settings/topics/${currentProjectId}`)).data
+    },
+    enabled: !!currentProjectId,
+  })
+  const { data: prompts } = useQuery<Prompt[]>({
+    queryKey: ['prompts', currentProjectId],
+    queryFn: async () => {
+      if (!currentProjectId) return []
+      return (await axios.get(`/api/settings/prompts/${currentProjectId}`)).data
+    },
+    enabled: !!currentProjectId,
+  })
 
   useEffect(() => { if (config) setForm(config) }, [config])
+
+  // Auto-fill company name from the selected brand
+  useEffect(() => {
+    if (selectedBrandName) {
+      setForm(prev => ({ ...prev, company_name: selectedBrandName }))
+    }
+  }, [selectedBrandName])
 
   const save = useMutation({
     mutationFn: (data: Partial<Config>) => axios.post('/api/settings/configure', data),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['config'] }); qc.invalidateQueries({ queryKey: ['dashboard'] }) },
+  })
+  const createTopic = useMutation({
+    mutationFn: async () => {
+      if (!currentProjectId || !newTopicName.trim()) return
+      await axios.post('/api/settings/security/topic', { project_id: currentProjectId, name: newTopicName.trim() })
+    },
+    onSuccess: () => {
+      setNewTopicName('')
+      qc.invalidateQueries({ queryKey: ['topics', currentProjectId] })
+    },
+  })
+  const createPrompt = useMutation({
+    mutationFn: async () => {
+      if (!currentProjectId || !newPromptMessage.trim()) return
+      await axios.post('/api/settings/security/prompt', {
+        project_id: currentProjectId,
+        message: newPromptMessage.trim(),
+        topic_id: form.security_topic_id || undefined,
+      })
+    },
+    onSuccess: () => {
+      setNewPromptMessage('')
+      qc.invalidateQueries({ queryKey: ['prompts', currentProjectId] })
+    },
+  })
+  const bootstrapRiskPrompts = useMutation({
+    mutationFn: async (payload?: { project_id: string; brand_name?: string }) => {
+      const project_id = payload?.project_id || currentProjectId
+      if (!project_id) return null
+      return (await axios.post('/api/settings/security/bootstrap-risk-prompts', {
+        project_id,
+        brand_name: payload?.brand_name || selectedBrandName || undefined,
+      })).data
+    },
+    onSuccess: (result: any) => {
+      if (!result) return
+      setForm(prev => ({
+        ...prev,
+        security_topic_enabled: true,
+        security_topic_id: result.topic_id,
+        custom_prompt_ids: result.all_risk_prompt_ids || prev.custom_prompt_ids || [],
+      }))
+      qc.invalidateQueries({ queryKey: ['topics', currentProjectId] })
+      qc.invalidateQueries({ queryKey: ['prompts', currentProjectId] })
+      setTestResult({ status: 'success', message: result.message || 'Risk prompts ensured.' })
+    },
+    onError: (err: any) => {
+      const detail = err?.response?.data?.detail || 'Failed to bootstrap risk prompts'
+      setTestResult({ status: 'error', message: detail })
+    },
   })
   const testConnection = async () => {
     try { setTestResult(null); const res = await axios.post('/api/settings/test-connection'); setTestResult(res.data) }
@@ -90,11 +171,29 @@ export default function Settings() {
             <label className="block text-sm text-gray-400 mb-1">
               Project {projects && <span className="text-gray-500">— {projects.length} available</span>}
             </label>
-            <select value={form.project_id || ''} onChange={e => setForm({ ...form, project_id: e.target.value, brand_id: '' })}
+            <select value={form.project_id || ''} onChange={e => {
+              const nextProjectId = e.target.value
+              setForm(prev => ({ ...prev, project_id: nextProjectId, brand_id: '' }))
+              if (nextProjectId) {
+                bootstrapRiskPrompts.mutate({
+                  project_id: nextProjectId,
+                  brand_name: selectedBrandName || undefined,
+                })
+              }
+            }}
               className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2">
               <option value="">Select project...</option>
               {(projects ?? []).map(p => <option key={p.id} value={p.id}>{p.name}{p.status && p.status !== 'CUSTOMER' ? ` [${p.status}]` : ''}</option>)}
             </select>
+            <div className="mt-2">
+              <button
+                onClick={() => bootstrapRiskPrompts.mutate()}
+                disabled={!currentProjectId || bootstrapRiskPrompts.isPending}
+                className="bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-xs"
+              >
+                {bootstrapRiskPrompts.isPending ? 'Adding risk prompts...' : 'Add/Refresh Risk Prompts (API + Haiku)'}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1">
@@ -140,6 +239,96 @@ export default function Settings() {
               className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2">
               {[1, 2, 4, 6, 12, 24].map(h => <option key={h} value={h}>Every {h} hour{h > 1 ? 's' : ''}</option>)}
             </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Security Analysis Configuration */}
+      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+        <h2 className="text-lg font-semibold text-white mb-4">Security Analysis Configuration</h2>
+        <div className="space-y-4">
+          <label className="flex items-center justify-between p-3 bg-gray-800/40 rounded-lg border border-gray-700">
+            <div>
+              <p className="text-sm text-white font-medium">Use custom security prompts</p>
+              <p className="text-xs text-gray-400">Limit analysis to selected security/fraud prompts</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={!!form.security_topic_enabled}
+              onChange={e => setForm({ ...form, security_topic_enabled: e.target.checked })}
+              className="h-4 w-4"
+            />
+          </label>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Security Topic</label>
+            <select
+              value={form.security_topic_id || ''}
+              onChange={e => setForm({ ...form, security_topic_id: e.target.value, custom_prompt_ids: [] })}
+              className="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2"
+            >
+              <option value="">Select topic...</option>
+              {(topics ?? []).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+            <div className="mt-2 flex gap-2">
+              <input
+                type="text"
+                value={newTopicName}
+                onChange={e => setNewTopicName(e.target.value)}
+                placeholder="Create topic (e.g. Security Threats & Fraud)"
+                className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2"
+              />
+              <button
+                onClick={() => createTopic.mutate()}
+                disabled={createTopic.isPending || !currentProjectId || !newTopicName.trim()}
+                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-sm"
+              >
+                {createTopic.isPending ? 'Creating...' : 'Create Topic'}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">Custom Prompts (select at least 5)</label>
+            <div className="mb-2 flex gap-2">
+              <input
+                type="text"
+                value={newPromptMessage}
+                onChange={e => setNewPromptMessage(e.target.value)}
+                placeholder="Create prompt via API"
+                className="flex-1 bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2"
+              />
+              <button
+                onClick={() => createPrompt.mutate()}
+                disabled={createPrompt.isPending || !currentProjectId || !newPromptMessage.trim()}
+                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-sm"
+              >
+                {createPrompt.isPending ? 'Creating...' : 'Create Prompt'}
+              </button>
+            </div>
+            <div className="max-h-64 overflow-y-auto border border-gray-700 rounded-lg">
+              {(prompts ?? []).filter(p => {
+                if (!form.security_topic_id) return true
+                return (p.topics || []).includes(form.security_topic_id)
+              }).map(p => {
+                const selected = (form.custom_prompt_ids || []).includes(p.id)
+                return (
+                  <label key={p.id} className="flex items-start gap-3 p-3 border-b border-gray-800 last:border-b-0 hover:bg-gray-800/40 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={e => {
+                        const next = new Set(form.custom_prompt_ids || [])
+                        if (e.target.checked) next.add(p.id)
+                        else next.delete(p.id)
+                        setForm({ ...form, custom_prompt_ids: Array.from(next) })
+                      }}
+                      className="mt-1 h-4 w-4"
+                    />
+                    <span className="text-sm text-gray-200">{p.message}</span>
+                  </label>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Selected: {(form.custom_prompt_ids || []).length}</p>
           </div>
         </div>
       </div>

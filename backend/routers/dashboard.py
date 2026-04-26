@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
 from typing import List
+import json
 
 from database import get_db
 from models import Threat, Action, CompetitorEvent, SentimentHistory, AppConfig
@@ -37,6 +38,18 @@ def _channel_from_model_id(model_id: str | None) -> str:
     return mid
 
 router = APIRouter()
+
+
+def _security_prompt_ids(config: AppConfig) -> list[str] | None:
+    """Always use the project's configured reputation prompts when they exist,
+    so the dashboard only shows threats relevant to the selected project."""
+    if not config or not config.custom_prompt_ids:
+        return None
+    try:
+        parsed = json.loads(config.custom_prompt_ids)
+        return parsed if isinstance(parsed, list) and parsed else None
+    except Exception:
+        return None
 
 
 async def ensure_configured(db: Session) -> dict:
@@ -96,12 +109,14 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
     
     if has_config:
         try:
+            prompt_ids = _security_prompt_ids(config)
             brands_report = await peec_client.get_brands_report(
                 project_id=config.project_id,
                 dimensions=["model_id"],
                 start_date=start_str,
                 end_date=end_str,
                 brand_id=config.brand_id,
+                prompt_ids=prompt_ids,
             )
             
             if brands_report.data:
@@ -137,9 +152,11 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
     live_competitors: list[dict] = []
     if has_config and config.brand_id:
         try:
+            prompt_ids = _security_prompt_ids(config)
             live_threats = await detect_threats(
                 config.project_id, config.brand_id,
                 config.company_name or "your brand",
+                prompt_ids=prompt_ids,
             )
         except Exception as e:
             print(f"detect_threats failed: {e}")
@@ -147,6 +164,7 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
             live_competitors = await detect_competitor_events(
                 config.project_id, config.brand_id,
                 config.company_name or "your brand",
+                prompt_ids=prompt_ids,
             )
         except Exception as e:
             print(f"detect_competitor_events failed: {e}")
@@ -185,11 +203,15 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
         Action.status.in_(["PENDING", "IN_PROGRESS"])
     ).count()
     
+    active_prompt_ids = _security_prompt_ids(config) or []
     return {
         "configured": True,
         "company_name": (config.company_name or "") if config else "",
         "project_id": config.project_id if config else None,
         "brand_id": config.brand_id if config else None,
+        "security_topic_enabled": bool(config.security_topic_enabled) if config else False,
+        "reputation_prompts_active": len(active_prompt_ids) > 0,
+        "reputation_prompts_count": len(active_prompt_ids),
         "brand_visibility": visibility,
         "sentiment_score": sentiment,
         "visibility_trend": "+3.2%",
@@ -198,5 +220,10 @@ async def get_dashboard(db: Session = Depends(get_db)) -> dict:
         "top_models": top_models,
         "recent_threats": recent_threats_data,
         "competitor_events": competitor_events_data,
+        "narrative_shift_tracker": {
+            "tracked_keywords": len(active_prompt_ids),
+            "target_sentiment_delta": 15,
+            "target_positive_mentions_delta_pct": 50,
+        },
         "action_queue_count": action_queue_count
     }

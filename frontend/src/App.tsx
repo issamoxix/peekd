@@ -3,9 +3,7 @@ import Sidebar from './components/layout/Sidebar'
 import Dashboard from './pages/Dashboard'
 import HeatMap from './pages/HeatMap'
 import ThreatCenter from './pages/ThreatCenter'
-import ActionQueue from './pages/ActionQueue'
-import Competitors from './pages/Competitors'
-import CrawlerConfig from './pages/CrawlerConfig'
+import AIContent from './pages/AIContent'
 import Settings from './pages/Settings'
 
 function App() {
@@ -19,9 +17,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/heatmap" element={<HeatMap />} />
             <Route path="/threats" element={<ThreatCenter />} />
-            <Route path="/actions" element={<ActionQueue />} />
-            <Route path="/competitors" element={<Competitors />} />
-            <Route path="/crawlers" element={<CrawlerConfig />} />
+            <Route path="/crawlers" element={<Navigate to="/ai-content" replace />} />
+            <Route path="/ai-content" element={<AIContent />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>

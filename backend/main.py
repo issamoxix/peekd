@@ -73,8 +73,8 @@ async def root():
 
 # Import and include routers
 try:
-    from routers import dashboard, threats, actions, competitors, crawlers, alerts, settings as settings_router, heatmap
-    
+    from routers import dashboard, threats, actions, competitors, crawlers, alerts, settings as settings_router, heatmap, ai_content
+
     app.include_router(settings_router.router, prefix="/api", tags=["Settings"])
     app.include_router(dashboard.router, prefix="/api", tags=["Dashboard"])
     app.include_router(heatmap.router, prefix="/api", tags=["Heatmap"])
@@ -83,6 +83,7 @@ try:
     app.include_router(competitors.router, prefix="/api", tags=["Competitors"])
     app.include_router(crawlers.router, prefix="/api", tags=["Crawlers"])
     app.include_router(alerts.router, prefix="/api", tags=["Alerts"])
+    app.include_router(ai_content.router, prefix="/api", tags=["AI Content"])
 except ImportError as e:
     print(f"⚠️  Warning: Some routers not yet available: {e}")
 

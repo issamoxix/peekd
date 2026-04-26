@@ -1,18 +1,16 @@
 import { NavLink } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { 
-  Shield, LayoutDashboard, AlertTriangle, ListChecks, 
-  Users, Bot, Settings, Grid3X3, Building2
+import {
+  Shield, LayoutDashboard, AlertTriangle,
+  Bot, Settings, Grid3X3, Building2, Sparkles
 } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/heatmap', icon: Grid3X3, label: 'Heat Map' },
   { to: '/threats', icon: AlertTriangle, label: 'Threat Center' },
-  { to: '/actions', icon: ListChecks, label: 'Action Queue' },
-  { to: '/competitors', icon: Users, label: 'Competitors' },
-  { to: '/crawlers', icon: Bot, label: 'Crawler Config' },
+  { to: '/ai-content', icon: Sparkles, label: 'Content & AI Crawlers' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
@@ -34,8 +32,8 @@ export default function Sidebar() {
             <Shield className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">SENTINEL</h1>
-            <p className="text-xs text-gray-400">AI Reputation Defense</p>
+            <h1 className="text-lg font-bold text-white">Peec Hack</h1>
+            <p className="text-xs text-gray-400">Reputation Intelligence</p>
           </div>
         </div>
       </div>

@@ -27,11 +27,11 @@ class CrawlerConfigService:
             return self._balanced_robots()
     
     def _balanced_robots(self) -> str:
-        """Balanced approach - allow retrieval, block training"""
+        """Balanced approach - allow retrieval bots to AI content, block training"""
         return """# Sentinel AI Crawler Configuration
 # Strategy: Balanced - Allow retrieval, block training
 
-# Block AI Training Crawlers
+# --- AI Training Crawlers (blocked) ---
 User-agent: ClaudeBot
 Disallow: /
 
@@ -44,35 +44,62 @@ Disallow: /
 User-agent: Google-Extended
 Disallow: /
 
-# Allow AI Retrieval Bots (stay cited in AI answers)
+# --- AI Retrieval Bots (explicitly allowed for AI content pages) ---
 User-agent: Claude-SearchBot
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: Claude-User
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: OAI-SearchBot
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: ChatGPT-User
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: PerplexityBot
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: Perplexity-User
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
+
+User-agent: Googlebot
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 # General crawlers
 User-agent: *
 Allow: /
-
-# Standard protections
 Disallow: /admin/
 Disallow: /api/
 Disallow: /internal/
-Disallow: /*.json$
-Disallow: /*.xml$
 
 # Content signals (Cloudflare standard)
 # ai-train: disallow
@@ -80,16 +107,20 @@ Disallow: /*.xml$
 # search: allow
 
 Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://yourdomain.com/sitemap-ai.xml
 """
     
     def _max_visibility_robots(self) -> str:
-        """Maximum AI visibility - allow everything"""
+        """Maximum AI visibility - allow everything including training"""
         return """# Sentinel AI Crawler Configuration
-# Strategy: Maximum AI Visibility
+# Strategy: Maximum AI Visibility (training + retrieval)
 
-# Allow all AI bots (training and retrieval)
 User-agent: ClaudeBot
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: Claude-SearchBot
 Allow: /
@@ -98,7 +129,11 @@ User-agent: Claude-User
 Allow: /
 
 User-agent: GPTBot
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Allow: /sitemap-ai.xml
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: OAI-SearchBot
 Allow: /
@@ -107,10 +142,16 @@ User-agent: ChatGPT-User
 Allow: /
 
 User-agent: CCBot
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: Google-Extended
-Allow: /
+Allow: /ai-context/
+Allow: /.well-known/llms.txt
+Disallow: /admin/
+Disallow: /api/
 
 User-agent: PerplexityBot
 Allow: /
@@ -121,12 +162,11 @@ Allow: /
 # General crawlers
 User-agent: *
 Allow: /
-
-# Only block sensitive areas
 Disallow: /admin/
 Disallow: /api/
 
 Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://yourdomain.com/sitemap-ai.xml
 """
     
     def _training_block_robots(self) -> str:
