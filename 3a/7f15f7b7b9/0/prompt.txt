@@ -1,0 +1,62 @@
+in the UI some texts are white while the background is also white fix them
+
+---
+
+commit and push
+
+---
+
+how to run the backend and frontend, write me a text text file of the command i need to run and where
+
+---
+
+is the THread center hzrdcoded for voicari ?
+
+---
+
+but why for this im getting voicari stuff ? curl 'http://localhost:5173/api/threats?status=OPEN' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,de;q=0.8' \
+  -H 'Connection: keep-alive' \
+  -H 'Referer: http://localhost:5173/threats' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"'
+
+---
+
+why does this request give me voicari curl 'http://localhost:5173/api/threats?status=OPEN' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,de;q=0.8' \
+  -H 'Connection: keep-alive' \
+  -H 'Referer: http://localhost:5173/threats' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' ?
+
+---
+
+yeah but ishouldn't be voicari stuff it should be generic
+
+---
+
+still getting voicari on this curl 'http://localhost:5173/api/threats/reputation-questions' \
+  -H 'Accept: application/json, text/plain, */*' \
+  -H 'Accept-Language: en-US,en;q=0.9,de;q=0.8' \
+  -H 'Connection: keep-alive' \
+  -H 'Referer: http://localhost:5173/threats' \
+  -H 'Sec-Fetch-Dest: empty' \
+  -H 'Sec-Fetch-Mode: cors' \
+  -H 'Sec-Fetch-Site: same-origin' \
+  -H 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36' \
+  -H 'sec-ch-ua: "Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"' \
+  -H 'sec-ch-ua-mobile: ?0' \
+  -H 'sec-ch-ua-platform: "macOS"' test next time before you confirlm
