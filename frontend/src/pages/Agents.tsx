@@ -114,7 +114,7 @@ export default function Agents() {
   }
 
   return (
-    <div className="text-zinc-100 space-y-8">
+    <div className="text-ink space-y-8">
       <Hero brandName={brandName} />
 
       <TabBar tab={tab} setTab={setTab} />
@@ -151,7 +151,7 @@ function Hero({ brandName }: { brandName?: string }) {
 function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
   return (
     <nav>
-      <div className="rounded-xl border border-white/10 card-surface p-1.5 flex gap-1 overflow-x-auto scrollbar-thin">
+      <div className="rounded-xl border border-line card-surface p-1.5 flex gap-1 overflow-x-auto scrollbar-thin">
         {TABS.map((t) => {
           const active = tab === t.id;
           return (
@@ -159,18 +159,15 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`group relative flex-1 min-w-[160px] flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ring-focus ${
-                active ? "text-white shadow-[0_8px_20px_-10px_rgba(99,102,241,0.6)]" : "text-zinc-400 hover:text-zinc-100"
+                active ? "bg-sage text-white shadow-[0_8px_20px_-10px_rgba(73,107,90,0.5)]" : "text-muted hover:text-ink hover:bg-pearl"
               }`}
             >
-              {active && (
-                <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-500/30 via-violet-500/30 to-indigo-500/30 ring-1 ring-inset ring-white/15" />
-              )}
               <span className="relative flex items-center gap-2">
-                <span className={`text-[13px] ${active ? "text-violet-200" : "text-zinc-500"}`}>{t.icon}</span>
+                <span className={`text-[13px] ${active ? "text-white/80" : "text-muted"}`}>{t.icon}</span>
                 <span>{t.label}</span>
                 <span
                   className={`hidden sm:inline rounded px-1.5 py-0.5 text-[10px] font-mono uppercase tracking-wide ${
-                    active ? "bg-white/10 text-zinc-200" : "bg-white/5 text-zinc-500"
+                    active ? "bg-white/15 text-white" : "bg-pearl text-muted"
                   }`}
                 >
                   {t.hint}
@@ -186,7 +183,7 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="flex flex-col text-[11px] uppercase tracking-wider font-medium text-zinc-500">
+    <label className="flex flex-col text-[11px] uppercase tracking-wider font-medium text-muted">
       {label}
       {children}
     </label>
@@ -216,7 +213,7 @@ function SectionHeader({
         )}
         <div>
           <h2 className="text-lg sm:text-xl font-semibold tracking-tight">{title}</h2>
-          {hint && <p className="text-xs text-zinc-500 mt-0.5">{hint}</p>}
+          {hint && <p className="text-xs text-muted mt-0.5">{hint}</p>}
         </div>
       </div>
       {right}
@@ -252,12 +249,12 @@ function AgentRunner({ projectId, brandId }: { projectId: string; brandId: strin
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 card-surface p-5 sm:p-6 space-y-5">
+    <section className="rounded-2xl border border-line card-surface p-5 sm:p-6 space-y-5">
       <SectionHeader
         step="2"
         title="Run Sentiment Flip Agent"
         hint="Detect negative AI mentions and generate counter-content"
-        accent="bg-gradient-to-br from-rose-500/30 to-amber-500/30 text-rose-200 ring-1 ring-inset ring-rose-400/30"
+        accent="bg-red-soft text-red ring-1 ring-inset ring-red/30"
         right={
           report && (
             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -271,10 +268,10 @@ function AgentRunner({ projectId, brandId }: { projectId: string; brandId: strin
 
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Days back">
-          <input type="number" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-zinc-100" />
+          <input type="number" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-ink" />
         </Field>
         <Field label="Max chats">
-          <input type="number" min={1} max={500} value={maxChats} onChange={(e) => setMaxChats(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-zinc-100" />
+          <input type="number" min={1} max={500} value={maxChats} onChange={(e) => setMaxChats(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-ink" />
         </Field>
         <button onClick={run} disabled={loading || !brandId} className="btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? (
@@ -303,35 +300,35 @@ function AgentRunner({ projectId, brandId }: { projectId: string; brandId: strin
 
 function FindingCard({ finding, plans }: { finding: Finding; plans: Plan[] }) {
   return (
-    <article className="rounded-xl border border-white/10 card-inset p-4 sm:p-5 space-y-4">
+    <article className="rounded-xl border border-line card-inset p-4 sm:p-5 space-y-4">
       <header className="flex flex-wrap items-center gap-2 text-xs">
-        <span className="rounded-md bg-amber-500/10 px-2 py-0.5 font-mono text-amber-300 ring-1 ring-inset ring-amber-500/30">{finding.model_channel_id}</span>
-        <span className="font-mono text-zinc-500">{finding.chat_id.slice(0, 16)}…</span>
-        <span className="text-zinc-500">brand: <span className="text-zinc-200">{finding.brand_name}</span></span>
+        <span className="rounded-md bg-amber-soft px-2 py-0.5 font-mono text-amber ring-1 ring-inset ring-amber/40">{finding.model_channel_id}</span>
+        <span className="font-mono text-muted">{finding.chat_id.slice(0, 16)}…</span>
+        <span className="text-muted">brand: <span className="text-ink">{finding.brand_name}</span></span>
       </header>
       <div>
         <SubHeading>Negative claims</SubHeading>
-        <ul className="list-disc list-inside space-y-1 text-sm text-zinc-200">
+        <ul className="list-disc list-inside space-y-1 text-sm text-ink">
           {finding.claims.map((c, i) => <li key={i}>{c}</li>)}
         </ul>
       </div>
       <div>
         <SubHeading>Response excerpt</SubHeading>
-        <pre className="whitespace-pre-wrap rounded-lg border border-white/5 bg-black/30 p-3 text-xs text-zinc-300 max-h-40 overflow-auto scrollbar-thin">{finding.response_excerpt}</pre>
+        <pre className="whitespace-pre-wrap rounded-lg border border-soft-line bg-pearl p-3 text-xs text-muted max-h-40 overflow-auto scrollbar-thin">{finding.response_excerpt}</pre>
       </div>
       <div>
         <SubHeading>Cited sources</SubHeading>
         <ul className="space-y-1 text-xs">
           {finding.sources.slice(0, 5).map((s, i) => (
             <li key={i} className="font-mono flex items-baseline gap-2">
-              <span className="text-zinc-500 shrink-0">{s.domain}</span>
-              <a href={s.url} target="_blank" rel="noreferrer" className="text-indigo-300 hover:text-indigo-200 hover:underline truncate">{s.url.slice(0, 80)}</a>
+              <span className="text-muted shrink-0">{s.domain}</span>
+              <a href={s.url} target="_blank" rel="noreferrer" className="text-sage hover:text-graphite hover:underline truncate">{s.url.slice(0, 80)}</a>
             </li>
           ))}
         </ul>
       </div>
       {plans.length > 0 && (
-        <div className="space-y-3 pt-2 border-t border-white/5">
+        <div className="space-y-3 pt-2 border-t border-soft-line">
           <SubHeading>Counter-content plans</SubHeading>
           {plans.map((p, i) => <PlanCard key={i} plan={p} />)}
         </div>
@@ -344,45 +341,45 @@ function PlanCard({ plan }: { plan: Plan }) {
   const supports = plan.plan.source_assessment.supports_claim;
   const supportsColor =
     supports === "no"
-      ? "text-emerald-300 bg-emerald-500/10 ring-emerald-500/30"
+      ? "text-emerald-700 bg-emerald-500/10 ring-emerald-500/30"
       : supports === "partial"
-      ? "text-amber-300 bg-amber-500/10 ring-amber-500/30"
-      : "text-rose-300 bg-rose-500/10 ring-rose-500/30";
+      ? "text-amber bg-amber-soft ring-amber/40"
+      : "text-red bg-rose-500/10 ring-rose-500/30";
   return (
-    <div className="rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.03] to-transparent p-4 space-y-3 text-sm">
+    <div className="rounded-xl border border-line bg-paper p-4 space-y-3 text-sm">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-zinc-100 italic leading-relaxed">&ldquo;{plan.claim}&rdquo;</p>
+        <p className="text-ink italic leading-relaxed">&ldquo;{plan.claim}&rdquo;</p>
         <span className={`shrink-0 rounded-md px-2 py-0.5 text-[11px] font-mono ring-1 ring-inset ${supportsColor}`}>source: {supports}</span>
       </div>
-      <a href={plan.source_url} target="_blank" rel="noreferrer" className="block truncate text-xs font-mono text-indigo-300 hover:text-indigo-200 hover:underline">{plan.source_url}</a>
+      <a href={plan.source_url} target="_blank" rel="noreferrer" className="block truncate text-xs font-mono text-sage hover:text-graphite hover:underline">{plan.source_url}</a>
       {plan.plan.source_assessment.key_quotes.length > 0 && (
         <div>
           <SubHeading>Key quotes</SubHeading>
-          <ul className="space-y-1 text-xs text-zinc-400">
+          <ul className="space-y-1 text-xs text-muted">
             {plan.plan.source_assessment.key_quotes.map((q, i) => <li key={i}>&ldquo;{q}&rdquo;</li>)}
           </ul>
         </div>
       )}
       <div>
         <SubHeading>Rebuttal</SubHeading>
-        <p className="text-zinc-200 leading-relaxed">{plan.plan.rebuttal}</p>
+        <p className="text-ink leading-relaxed">{plan.plan.rebuttal}</p>
       </div>
-      <div className="rounded-lg border border-white/5 bg-black/20 p-3 space-y-1">
+      <div className="rounded-lg border border-soft-line bg-pearl p-3 space-y-1">
         <SubHeading>PR pitch</SubHeading>
-        <p className="text-zinc-300 text-sm"><span className="font-medium text-zinc-100">Target:</span> {plan.plan.pr_pitch.target}</p>
-        <p className="text-zinc-300 text-sm"><span className="font-medium text-zinc-100">Angle:</span> {plan.plan.pr_pitch.angle}</p>
+        <p className="text-muted text-sm"><span className="font-medium text-ink">Target:</span> {plan.plan.pr_pitch.target}</p>
+        <p className="text-muted text-sm"><span className="font-medium text-ink">Angle:</span> {plan.plan.pr_pitch.angle}</p>
         <details className="mt-1">
-          <summary className="cursor-pointer text-xs text-indigo-300 hover:text-indigo-200 hover:underline">Draft email ›</summary>
-          <pre className="mt-2 whitespace-pre-wrap rounded-md border border-white/5 bg-black/40 p-3 text-xs text-zinc-300 scrollbar-thin">{plan.plan.pr_pitch.draft_email}</pre>
+          <summary className="cursor-pointer text-xs text-sage hover:text-graphite hover:underline">Draft email ›</summary>
+          <pre className="mt-2 whitespace-pre-wrap rounded-md border border-soft-line bg-pearl p-3 text-xs text-muted scrollbar-thin">{plan.plan.pr_pitch.draft_email}</pre>
         </details>
       </div>
       <div>
         <SubHeading>New content ideas</SubHeading>
-        <ul className="space-y-2 text-xs text-zinc-300">
+        <ul className="space-y-2 text-xs text-muted">
           {plan.plan.new_content.map((c, i) => (
-            <li key={i} className="rounded-lg border border-white/5 bg-black/20 p-3">
-              <div className="text-zinc-100 font-medium">{c.title} <span className="font-normal text-zinc-500">— {c.format}</span></div>
-              <ul className="mt-1.5 list-disc list-inside text-zinc-400 space-y-0.5">
+            <li key={i} className="rounded-lg border border-soft-line bg-pearl p-3">
+              <div className="text-ink font-medium">{c.title} <span className="font-normal text-muted">— {c.format}</span></div>
+              <ul className="mt-1.5 list-disc list-inside text-muted space-y-0.5">
                 {c.outline.map((o, j) => <li key={j}>{o}</li>)}
               </ul>
             </li>
@@ -394,13 +391,13 @@ function PlanCard({ plan }: { plan: Plan }) {
 }
 
 const OUTREACH_COLOR: Record<InfiltrationPlanBody["outreach_type"], string> = {
-  guest_post: "bg-violet-500/15 text-violet-300 ring-1 ring-inset ring-violet-500/30",
-  product_review: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
-  partnership: "bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/30",
-  press_pitch: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
-  community_engagement: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
-  data_contribution: "bg-cyan-500/15 text-cyan-300 ring-1 ring-inset ring-cyan-500/30",
-  comment_or_correction: "bg-zinc-500/15 text-zinc-300 ring-1 ring-inset ring-zinc-500/30",
+  guest_post: "bg-violet-100 text-violet-700 ring-1 ring-inset ring-violet-300",
+  product_review: "bg-emerald-100 text-emerald-700 ring-1 ring-inset ring-emerald-300",
+  partnership: "bg-sky-100 text-sky-700 ring-1 ring-inset ring-sky-300",
+  press_pitch: "bg-amber-soft text-amber ring-1 ring-inset ring-amber/40",
+  community_engagement: "bg-rose-100 text-rose-700 ring-1 ring-inset ring-rose-300",
+  data_contribution: "bg-cyan-100 text-cyan-700 ring-1 ring-inset ring-cyan-300",
+  comment_or_correction: "bg-pearl text-muted ring-1 ring-inset ring-line",
 };
 
 function SourceInfiltration({ projectId, brandId }: { projectId: string; brandId: string }) {
@@ -445,11 +442,11 @@ function SourceInfiltration({ projectId, brandId }: { projectId: string; brandId
   }
 
   return (
-    <section className="rounded-2xl border border-white/10 card-surface p-5 sm:p-6 space-y-5">
+    <section className="rounded-2xl border border-line card-surface p-5 sm:p-6 space-y-5">
       <SectionHeader
         title="Source Infiltration Planner"
         hint="Find high-leverage citation gaps and generate outreach plans"
-        accent="bg-gradient-to-br from-sky-500/30 to-cyan-500/30 text-sky-200 ring-1 ring-inset ring-sky-400/30"
+        accent="bg-sage-soft text-sage ring-1 ring-inset ring-sage/30"
         right={
           report && (
             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -460,15 +457,15 @@ function SourceInfiltration({ projectId, brandId }: { projectId: string; brandId
           )
         }
       />
-      <p className="text-sm text-zinc-400 leading-relaxed">
+      <p className="text-sm text-muted leading-relaxed">
         Maps which domains LLMs trust most in your category, finds the highest-leverage URLs where your brand is absent, and generates outreach plans to get included.
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <Field label="Days back">
-          <input type="number" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-zinc-100" />
+          <input type="number" min={1} max={365} value={days} onChange={(e) => setDays(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-ink" />
         </Field>
         <Field label="Max targets">
-          <input type="number" min={1} max={20} value={maxTargets} onChange={(e) => setMaxTargets(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-zinc-100" />
+          <input type="number" min={1} max={20} value={maxTargets} onChange={(e) => setMaxTargets(Number(e.target.value))} className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-ink" />
         </Field>
         <button onClick={run} disabled={loading || !brandId} className="btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? (
@@ -481,13 +478,13 @@ function SourceInfiltration({ projectId, brandId }: { projectId: string; brandId
         </button>
       </div>
       <Field label="Exclude domains (comma- or space-separated)">
-        <input type="text" value={excludeDomains} onChange={(e) => setExcludeDomains(e.target.value)} placeholder="traini.app, sarama.ai" className="input-base mt-1 w-full rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono" />
+        <input type="text" value={excludeDomains} onChange={(e) => setExcludeDomains(e.target.value)} placeholder="traini.app, sarama.ai" className="input-base mt-1 w-full rounded-lg px-3 py-2 text-sm text-ink font-mono" />
       </Field>
       {excludeList.length > 0 && (
         <div className="-mt-3 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-zinc-500">blocking {excludeList.length}:</span>
+          <span className="text-[11px] text-muted">blocking {excludeList.length}:</span>
           {excludeList.map((d) => (
-            <span key={d} className="rounded-md bg-rose-500/10 px-2 py-0.5 text-[11px] font-mono text-rose-300 ring-1 ring-inset ring-rose-500/30">{d}</span>
+            <span key={d} className="rounded-md bg-rose-500/10 px-2 py-0.5 text-[11px] font-mono text-red ring-1 ring-inset ring-rose-500/30">{d}</span>
           ))}
         </div>
       )}
@@ -512,20 +509,20 @@ function CitationGraphCard({ nodes }: { nodes: CitationGraphNode[] }) {
   const top = nodes.slice(0, 10);
   const max = Math.max(1, ...top.map((n) => n.citation_count));
   return (
-    <div className="rounded-xl border border-white/10 card-inset p-4">
+    <div className="rounded-xl border border-line card-inset p-4">
       <SubHeading>Top cited domains in your category</SubHeading>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-2">
         {top.map((n) => {
           const pct = (n.citation_count / max) * 100;
           return (
             <div key={n.domain} className="flex items-center gap-3">
-              <span className="text-[11px] font-mono text-zinc-400 w-10 text-right shrink-0">{n.citation_count}</span>
+              <span className="text-[11px] font-mono text-muted w-10 text-right shrink-0">{n.citation_count}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-xs text-zinc-200 font-mono truncate">{n.domain}</span>
-                  {n.classification && <span className="text-[10px] text-zinc-500 uppercase tracking-wider shrink-0">{n.classification}</span>}
+                  <span className="text-xs text-ink font-mono truncate">{n.domain}</span>
+                  {n.classification && <span className="text-[10px] text-muted uppercase tracking-wider shrink-0">{n.classification}</span>}
                 </div>
-                <div className="mt-1 h-1 w-full rounded-full bg-white/5 overflow-hidden">
+                <div className="mt-1 h-1 w-full rounded-full bg-pearl overflow-hidden">
                   <div className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-violet-400 to-sky-400" style={{ width: `${pct}%` }} />
                 </div>
               </div>
@@ -540,49 +537,49 @@ function CitationGraphCard({ nodes }: { nodes: CitationGraphNode[] }) {
 function InfiltrationCard({ entry, onBlock }: { entry: InfiltrationPlanEntry; onBlock: () => void }) {
   const { target, plan } = entry;
   return (
-    <article className="rounded-xl border border-white/10 card-inset p-5 space-y-4">
+    <article className="rounded-xl border border-line card-inset p-5 space-y-4">
       <header className="space-y-2">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-md bg-gradient-to-r from-amber-500/15 to-orange-500/15 px-2 py-0.5 font-mono text-amber-300 ring-1 ring-inset ring-amber-500/30">⚡ score {target.leverage_score}</span>
-          {target.classification && <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-zinc-300 ring-1 ring-inset ring-white/10">{target.classification}</span>}
+          <span className="rounded-md bg-amber-soft px-2 py-0.5 font-mono text-amber ring-1 ring-inset ring-amber/40">⚡ score {target.leverage_score}</span>
+          {target.classification && <span className="rounded-md bg-pearl px-2 py-0.5 font-mono text-muted ring-1 ring-inset ring-line">{target.classification}</span>}
           <span className={`rounded-md px-2 py-0.5 font-mono uppercase tracking-wider ${OUTREACH_COLOR[plan.outreach_type]}`}>{plan.outreach_type.replace("_", " ")}</span>
           <Pill label="effort" value={plan.effort} />
           <Pill label="impact" value={plan.expected_impact} />
-          <button onClick={onBlock} title="Mark as competitor and exclude from future runs" className="ml-auto rounded-md border border-white/10 px-2.5 py-0.5 text-xs text-zinc-400 hover:bg-rose-500/10 hover:text-rose-300 hover:border-rose-500/40 transition">⊘ Block {target.domain}</button>
+          <button onClick={onBlock} title="Mark as competitor and exclude from future runs" className="ml-auto rounded-md border border-line px-2.5 py-0.5 text-xs text-muted hover:bg-rose-500/10 hover:text-red hover:border-rose-500/40 transition">⊘ Block {target.domain}</button>
         </div>
         <div>
-          <a href={target.url} target="_blank" rel="noreferrer" className="text-sm text-indigo-300 hover:text-indigo-200 hover:underline break-all">{target.url}</a>
-          {target.title && <p className="text-xs text-zinc-400 mt-1">{target.title}</p>}
-          <p className="text-xs text-zinc-500 mt-1 font-mono">
+          <a href={target.url} target="_blank" rel="noreferrer" className="text-sm text-sage hover:text-graphite hover:underline break-all">{target.url}</a>
+          {target.title && <p className="text-xs text-muted mt-1">{target.title}</p>}
+          <p className="text-xs text-muted mt-1 font-mono">
             {target.citation_count} citations · {target.retrieval_count} retrievals · rate {target.citation_rate}
             {target.competitors_present.length > 0 && (
-              <> · competitors: <span className="text-amber-300">{target.competitors_present.length}</span></>
+              <> · competitors: <span className="text-amber">{target.competitors_present.length}</span></>
             )}
           </p>
         </div>
       </header>
       <div>
         <SubHeading>Why strategic</SubHeading>
-        <p className="text-sm text-zinc-200 leading-relaxed">{plan.why_strategic}</p>
+        <p className="text-sm text-ink leading-relaxed">{plan.why_strategic}</p>
       </div>
       <div className="grid sm:grid-cols-2 gap-4 text-sm">
-        <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+        <div className="rounded-lg border border-soft-line bg-pearl p-3">
           <SubHeading>Target contact</SubHeading>
-          <p className="text-zinc-200">{plan.target_contact}</p>
+          <p className="text-ink">{plan.target_contact}</p>
         </div>
-        <div className="rounded-lg border border-white/5 bg-black/20 p-3">
+        <div className="rounded-lg border border-soft-line bg-pearl p-3">
           <SubHeading>Angle</SubHeading>
-          <p className="text-zinc-200">{plan.angle}</p>
+          <p className="text-ink">{plan.angle}</p>
         </div>
       </div>
       <details>
-        <summary className="cursor-pointer text-xs text-indigo-300 hover:text-indigo-200 hover:underline">Draft outreach ›</summary>
-        <pre className="mt-2 whitespace-pre-wrap rounded-lg border border-white/5 bg-black/40 p-3 text-xs text-zinc-300 scrollbar-thin">{plan.draft_outreach}</pre>
+        <summary className="cursor-pointer text-xs text-sage hover:text-graphite hover:underline">Draft outreach ›</summary>
+        <pre className="mt-2 whitespace-pre-wrap rounded-lg border border-soft-line bg-pearl p-3 text-xs text-muted scrollbar-thin">{plan.draft_outreach}</pre>
       </details>
       {plan.alternatives.length > 0 && (
         <div>
           <SubHeading>Fallback approaches</SubHeading>
-          <ul className="list-disc list-inside space-y-1 text-xs text-zinc-300">
+          <ul className="list-disc list-inside space-y-1 text-xs text-muted">
             {plan.alternatives.map((a, i) => <li key={i}>{a}</li>)}
           </ul>
         </div>
@@ -592,17 +589,17 @@ function InfiltrationCard({ entry, onBlock }: { entry: InfiltrationPlanEntry; on
 }
 
 function SubHeading({ children }: { children: React.ReactNode }) {
-  return <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-zinc-500 mb-1.5">{children}</div>;
+  return <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-muted mb-1.5">{children}</div>;
 }
 function Spinner() {
   return <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />;
 }
 function ErrorPill({ message }: { message: string }) {
-  return <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200">{message}</div>;
+  return <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-red">{message}</div>;
 }
 function LoadingState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-white/10 card-inset p-4 text-sm text-zinc-400 flex items-center gap-3">
+    <div className="rounded-xl border border-line card-inset p-4 text-sm text-muted flex items-center gap-3">
       <Spinner />
       {message}
     </div>
@@ -610,25 +607,25 @@ function LoadingState({ message }: { message: string }) {
 }
 function EmptyState({ title, message }: { title: string; message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] p-6 text-center">
-      <div className="text-sm font-medium text-zinc-200">{title}</div>
-      <p className="text-xs text-zinc-500 mt-1">{message}</p>
+    <div className="rounded-xl border border-dashed border-line bg-pearl/50 p-6 text-center">
+      <div className="text-sm font-medium text-ink">{title}</div>
+      <p className="text-xs text-muted mt-1">{message}</p>
     </div>
   );
 }
 function Stat({ label, value, tone }: { label: string; value: number | string; tone: "neutral" | "warn" | "success" }) {
-  const toneClass = tone === "warn" ? "text-amber-300" : tone === "success" ? "text-emerald-300" : "text-zinc-100";
+  const toneClass = tone === "warn" ? "text-amber" : tone === "success" ? "text-emerald-700" : "text-ink";
   return (
-    <span className="rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono">
-      <span className={`${toneClass} font-semibold`}>{value}</span> <span className="text-zinc-500">{label}</span>
+    <span className="rounded-md border border-line bg-pearl px-2 py-1 font-mono">
+      <span className={`${toneClass} font-semibold`}>{value}</span> <span className="text-muted">{label}</span>
     </span>
   );
 }
 function Pill({ label, value }: { label: string; value: string }) {
-  const tone = value === "high" ? "text-emerald-300" : value === "medium" ? "text-amber-300" : "text-zinc-300";
+  const tone = value === "high" ? "text-emerald-700" : value === "medium" ? "text-amber" : "text-muted";
   return (
-    <span className="rounded-md bg-white/5 px-2 py-0.5 font-mono text-[11px] ring-1 ring-inset ring-white/10">
-      <span className="text-zinc-500">{label}: </span>
+    <span className="rounded-md bg-pearl px-2 py-0.5 font-mono text-[11px] ring-1 ring-inset ring-line">
+      <span className="text-muted">{label}: </span>
       <span className={tone}>{value}</span>
     </span>
   );
