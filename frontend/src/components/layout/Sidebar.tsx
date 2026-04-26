@@ -12,6 +12,7 @@ import {
   FileText,
   Bot,
   Search,
+  Wand2,
 } from "lucide-react";
 
 const navItems = [
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/competitors", icon: Building2, label: "Competitors" },
   { to: "/actions", icon: ListChecks, label: "Action Queue" },
   { to: "/crawlers", icon: ScanSearch, label: "Crawler Config" },
+  { to: "/prompts", icon: Wand2, label: "Prompt Studio" },
   { to: "/agents", icon: Bot, label: "Peec AI Agents" },
   { to: "/analyzer", icon: FileText, label: "Brand Analyzer" },
   { to: "/adblume", icon: Search, label: "Adblume Gap Engine" },

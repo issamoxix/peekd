@@ -68,6 +68,7 @@ class RecommendPromptsRequest(BaseModel):
     project_id: str
     brand_id: str
     count: int = 12
+    use_case: str = "general"
     model: str = RECOMMENDER_MODEL
 
 
@@ -76,7 +77,9 @@ async def recommend_prompts(req: RecommendPromptsRequest):
     try:
         async with PeecClient(project_id=req.project_id) as peec:
             rec = PromptRecommender(peec, model=req.model)
-            return await rec.recommend(req.brand_id, count=req.count)
+            return await rec.recommend(
+                req.brand_id, count=req.count, use_case=req.use_case
+            )
     except RuntimeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -94,6 +97,31 @@ async def create_prompts_batch(req: CreatePromptsRequest):
         raise HTTPException(status_code=400, detail="texts must not be empty")
     async with PeecClient(project_id=req.project_id) as peec:
         results = await peec.create_prompts_batch(cleaned, req.country_code)
+    return {"results": results}
+
+
+class PromptItem(BaseModel):
+    text: str
+    topic: str | None = None
+
+
+class CreatePromptsWithTopicsRequest(BaseModel):
+    project_id: str
+    items: list[PromptItem]
+    country_code: str = "US"
+
+
+@app.post("/prompts/batch-with-topics")
+async def create_prompts_with_topics(req: CreatePromptsWithTopicsRequest):
+    cleaned = [
+        {"text": (i.text or "").strip(), "topic": (i.topic or "").strip() or None}
+        for i in req.items
+        if i.text and i.text.strip()
+    ]
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="items must not be empty")
+    async with PeecClient(project_id=req.project_id) as peec:
+        results = await peec.create_prompts_with_topics(cleaned, req.country_code)
     return {"results": results}
 
 

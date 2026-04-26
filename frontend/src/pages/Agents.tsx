@@ -4,20 +4,6 @@ import { useCurrentSelection } from "../hooks/useCurrentSelection";
 
 const API = "/agents-api";
 
-type Recommendation = {
-  text: string;
-  category: "discovery" | "comparison" | "buyer_intent" | "use_case" | "defense";
-  rationale: string;
-};
-
-type CreatePromptResult = {
-  text: string;
-  ok: boolean;
-  id?: string;
-  status?: number;
-  error?: string;
-};
-
 type Source = { url: string; domain: string; citationCount: number; citationPosition: number };
 
 type Finding = {
@@ -96,25 +82,16 @@ type InfiltrationReport = {
   plans: InfiltrationPlanEntry[];
 };
 
-type Tab = "prompts" | "sentiment-flip" | "infiltration";
-
-const CATEGORY_COLOR: Record<Recommendation["category"], string> = {
-  discovery: "bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/30",
-  comparison: "bg-violet-500/15 text-violet-300 ring-1 ring-inset ring-violet-500/30",
-  buyer_intent: "bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30",
-  use_case: "bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/30",
-  defense: "bg-rose-500/15 text-rose-300 ring-1 ring-inset ring-rose-500/30",
-};
+type Tab = "sentiment-flip" | "infiltration";
 
 const TABS: { id: Tab; label: string; icon: string; hint: string }[] = [
-  { id: "prompts", label: "Tracking Prompts", icon: "✦", hint: "Seed" },
   { id: "sentiment-flip", label: "Sentiment Flip", icon: "◈", hint: "Defend" },
   { id: "infiltration", label: "Source Infiltration", icon: "◉", hint: "Expand" },
 ];
 
 export default function Agents() {
   const { projectId, brandId, brandName, isConfigured } = useCurrentSelection();
-  const [tab, setTab] = useState<Tab>("prompts");
+  const [tab, setTab] = useState<Tab>("sentiment-flip");
 
   if (!isConfigured) {
     return (
@@ -143,7 +120,6 @@ export default function Agents() {
       <TabBar tab={tab} setTab={setTab} />
 
       <div>
-        {tab === "prompts" && <PromptRecommender projectId={projectId} brandId={brandId} onPromptsAdded={() => {}} />}
         {tab === "sentiment-flip" && <AgentRunner projectId={projectId} brandId={brandId} />}
         {tab === "infiltration" && <SourceInfiltration projectId={projectId} brandId={brandId} />}
       </div>
@@ -248,240 +224,6 @@ function SectionHeader({
   );
 }
 
-function PromptRecommender({
-  projectId,
-  brandId,
-  onPromptsAdded,
-}: {
-  projectId: string;
-  brandId: string;
-  onPromptsAdded: () => void;
-}) {
-  const [count, setCount] = useState(10);
-  const [country, setCountry] = useState("US");
-  const [recs, setRecs] = useState<Recommendation[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [custom, setCustom] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [results, setResults] = useState<CreatePromptResult[] | null>(null);
-
-  const customLines = useMemo(
-    () =>
-      custom
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean),
-    [custom]
-  );
-  const totalToAdd = selected.size + customLines.length;
-
-  async function generate() {
-    if (!brandId || !projectId) return;
-    setLoading(true);
-    setError(null);
-    setResults(null);
-    try {
-      const r = await fetch(`${API}/agents/recommend-prompts`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, brand_id: brandId, count }),
-      });
-      if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-      const data: { recommendations: Recommendation[] } = await r.json();
-      setRecs(data.recommendations);
-      setSelected(new Set(data.recommendations.map((x) => x.text)));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function add() {
-    const texts = [...recs.filter((r) => selected.has(r.text)).map((r) => r.text), ...customLines];
-    if (texts.length === 0) return;
-    setAdding(true);
-    setError(null);
-    setResults(null);
-    try {
-      const r = await fetch(`${API}/prompts/batch`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: projectId, texts, country_code: country }),
-      });
-      if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-      const data: { results: CreatePromptResult[] } = await r.json();
-      setResults(data.results);
-      setSelected(new Set());
-      setCustom("");
-      setRecs([]);
-      onPromptsAdded();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setAdding(false);
-    }
-  }
-
-  function toggle(text: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(text)) next.delete(text);
-      else next.add(text);
-      return next;
-    });
-  }
-
-  return (
-    <section className="rounded-2xl border border-white/10 card-surface p-5 sm:p-6 space-y-5">
-      <SectionHeader
-        step="1"
-        title="Add tracking prompts"
-        hint="Recommend → review → add to Peec"
-        accent="bg-gradient-to-br from-indigo-500/30 to-violet-500/30 text-indigo-200 ring-1 ring-inset ring-indigo-400/30"
-      />
-
-      <div className="flex flex-wrap items-end gap-3">
-        <Field label="Recommendations">
-          <input
-            type="number"
-            min={3}
-            max={25}
-            value={count}
-            onChange={(e) => setCount(Number(e.target.value))}
-            className="input-base mt-1 w-28 rounded-lg px-3 py-2 text-sm text-zinc-100"
-          />
-        </Field>
-        <Field label="Country">
-          <input
-            type="text"
-            maxLength={2}
-            value={country}
-            onChange={(e) => setCountry(e.target.value.toUpperCase())}
-            className="input-base mt-1 w-24 rounded-lg px-3 py-2 text-sm text-zinc-100 uppercase font-mono tracking-wider"
-          />
-        </Field>
-        <button
-          onClick={generate}
-          disabled={loading || !brandId}
-          className="btn-ghost rounded-lg px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? (
-            <span className="flex items-center gap-2">
-              <Spinner /> Generating…
-            </span>
-          ) : (
-            "Generate recommendations"
-          )}
-        </button>
-      </div>
-
-      {recs.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-zinc-500">
-            <span>
-              <span className="text-zinc-200 font-mono">{selected.size}</span> / {recs.length} selected
-            </span>
-            <div className="flex gap-3">
-              <button onClick={() => setSelected(new Set(recs.map((r) => r.text)))} className="hover:text-zinc-100 transition">
-                Select all
-              </button>
-              <span className="text-zinc-700">·</span>
-              <button onClick={() => setSelected(new Set())} className="hover:text-zinc-100 transition">
-                Clear
-              </button>
-            </div>
-          </div>
-          <ul className="space-y-2">
-            {recs.map((r) => {
-              const isSelected = selected.has(r.text);
-              return (
-                <li
-                  key={r.text}
-                  className={`group rounded-xl border p-3 transition-all ${
-                    isSelected ? "border-indigo-400/40 bg-indigo-500/5" : "border-white/10 card-inset hover:border-white/20"
-                  }`}
-                >
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggle(r.text)} className="mt-1 h-4 w-4 accent-indigo-500" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className={`rounded-md px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider ${CATEGORY_COLOR[r.category]}`}>
-                          {r.category.replace("_", " ")}
-                        </span>
-                        <span className="text-sm text-zinc-100">{r.text}</span>
-                      </div>
-                      <p className="text-xs text-zinc-500 leading-relaxed">{r.rationale}</p>
-                    </div>
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      <div>
-        <Field label="Custom prompts (one per line)">
-          <textarea
-            value={custom}
-            onChange={(e) => setCustom(e.target.value)}
-            rows={3}
-            placeholder="Add your own ideas — one prompt per line"
-            className="input-base mt-1 rounded-lg px-3 py-2 text-sm text-zinc-100 font-mono"
-          />
-        </Field>
-        {customLines.length > 0 && (
-          <p className="mt-1.5 text-xs text-zinc-500">
-            {customLines.length} custom prompt{customLines.length === 1 ? "" : "s"}
-          </p>
-        )}
-      </div>
-
-      <div className="flex items-center gap-3 pt-1">
-        <button
-          onClick={add}
-          disabled={adding || totalToAdd === 0 || !brandId}
-          className="btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {adding ? (
-            <span className="flex items-center gap-2">
-              <Spinner /> Adding…
-            </span>
-          ) : (
-            `Add ${totalToAdd || ""} prompt${totalToAdd === 1 ? "" : "s"} to Peec`
-          )}
-        </button>
-        {error && <ErrorPill message={error} />}
-      </div>
-
-      {results && (
-        <div className="rounded-xl border border-white/10 card-inset p-4 text-sm">
-          <p className="text-zinc-300 mb-2">
-            Created <span className="text-emerald-400 font-mono font-medium">{results.filter((r) => r.ok).length}</span> /{" "}
-            {results.length} prompts
-            {results.some((r) => !r.ok) && (
-              <span className="text-rose-400"> — {results.filter((r) => !r.ok).length} failed</span>
-            )}
-          </p>
-          {results.some((r) => !r.ok) && (
-            <ul className="space-y-1 text-xs">
-              {results
-                .filter((r) => !r.ok)
-                .map((r, i) => (
-                  <li key={i} className="text-rose-400 font-mono">
-                    {r.status} — {r.text.slice(0, 80)}
-                  </li>
-                ))}
-            </ul>
-          )}
-        </div>
-      )}
-    </section>
-  );
-}
 
 function AgentRunner({ projectId, brandId }: { projectId: string; brandId: string }) {
   const [days, setDays] = useState(120);

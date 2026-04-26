@@ -17,6 +17,8 @@ export default {
         amber: "#b46d32",
         "amber-soft": "#f4e3d4",
         graphite: "#2f3432",
+        red: "#9c3f35",
+        "red-soft": "#f4dddd",
         // legacy
         navy: "#0F172A",
         teal: "#0D9488",

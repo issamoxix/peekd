@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { Sidebar, SelectionBanner } from "./components/layout";
 import { Analyzer } from "./pages/Analyzer";
 import Agents from "./pages/Agents";
+import PromptStudio from "./pages/PromptStudio";
 import Adblume from "./pages/Adblume";
 import Dashboard from "./pages/Dashboard";
 import HeatMap from "./pages/HeatMap";
@@ -31,6 +32,7 @@ function MainArea() {
         <Route path="/actions" element={<ActionQueue />} />
         <Route path="/crawlers" element={<CrawlerConfig />} />
         <Route path="/agents" element={<Agents />} />
+        <Route path="/prompts" element={<PromptStudio />} />
         <Route path="/analyzer" element={<Analyzer />} />
         <Route path="/adblume" element={<Adblume />} />
         <Route path="/settings" element={<Settings />} />

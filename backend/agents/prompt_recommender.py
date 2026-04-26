@@ -35,18 +35,61 @@ of measuring discovery visibility).
   - Vague trend prompts ("AI in 2026").
   - Prompts that are essentially identical reworded.
 
+Each prompt must also be tagged with a SHORT topic label (<= 32 chars, Title \
+Case, no emojis) used to organize prompts in Peec. Pick a topic that groups \
+the prompt with peers — e.g. "Discovery", "Pricing", "Comparison", \
+"Use Cases", "Reputation", "Negative Sentiment", "Source Authority", \
+"Brand Perception", "Gap Coverage". Reuse the same topic across related \
+prompts; do not invent a unique topic per prompt.
+
 Return STRICT JSON with this shape:
 {
   "recommendations": [
     {
       "text": string,                                  // <= 200 chars
       "category": "discovery" | "comparison" | "buyer_intent" | "use_case" | "defense",
+      "topic": string,                                 // <= 32 chars, Title Case
       "rationale": string                              // 1 sentence: why this prompt matters
     }
   ]
 }
 
 Categorize evenly across the 5 categories where possible."""
+
+
+USE_CASE_GUIDANCE: dict[str, str] = {
+    "general": (
+        "General balanced visibility tracking across the buyer journey. "
+        "Cover all five categories evenly."
+    ),
+    "sentiment_flip": (
+        "Focus on prompts likely to surface NEGATIVE sentiment about the "
+        "brand, common complaints, comparisons where the brand could lose, "
+        "and reputation-risk queries. Lean heavier on 'defense' and "
+        "'comparison'. Prefer topics like 'Reputation', 'Negative Sentiment', "
+        "'Comparison', 'Risk Queries'."
+    ),
+    "source_infiltration": (
+        "Focus on prompts that are likely to cite third-party sources "
+        "(reviews, listicles, industry roundups, comparison articles). "
+        "Lean heavier on 'comparison' and 'discovery' — queries that AI "
+        "answers by quoting external authorities. Prefer topics like "
+        "'Source Authority', 'Industry Roundups', 'Listicles', 'Reviews'."
+    ),
+    "gap_analysis": (
+        "Focus on prompts that probe whether the brand is mentioned at all "
+        "in its category — unbranded discovery, alternatives queries, "
+        "category-leader queries. Lean heavier on 'discovery' and "
+        "'use_case'. Prefer topics like 'Gap Coverage', 'Unbranded "
+        "Discovery', 'Alternatives', 'Category Leaders'."
+    ),
+    "brand_analyzer": (
+        "Focus on prompts that elicit detailed brand perception — what the "
+        "brand stands for, who it's for, what makes it different. Lean "
+        "heavier on 'defense' (branded) and 'use_case'. Prefer topics like "
+        "'Brand Perception', 'Positioning', 'Differentiators', 'Audience'."
+    ),
+}
 
 
 class PromptRecommender:
@@ -60,17 +103,25 @@ class PromptRecommender:
         self.llm = anthropic_client or AsyncAnthropic()
         self.model = model
 
-    async def recommend(self, brand_id: str, count: int = 12) -> dict:
+    async def recommend(
+        self,
+        brand_id: str,
+        count: int = 12,
+        use_case: str = "general",
+    ) -> dict:
         brands = await self.peec.list_brands()
         brand = next((b for b in brands if b["id"] == brand_id), None)
         if not brand:
             raise RuntimeError(f"Brand {brand_id} not found")
 
         homepage_md = await self._scrape_homepage(brand)
+        guidance = USE_CASE_GUIDANCE.get(use_case, USE_CASE_GUIDANCE["general"])
 
         user = (
             f"Brand name: {brand['name']}\n"
             f"Domains: {', '.join(brand.get('domains') or []) or '(none)'}\n"
+            f"Use case: {use_case}\n"
+            f"Use-case guidance: {guidance}\n"
             f"Generate {count} prompt suggestions.\n\n"
             f"Homepage content (markdown, may be truncated):\n"
             f"---\n{homepage_md or '(homepage unavailable)'}\n---"

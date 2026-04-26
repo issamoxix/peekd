@@ -95,12 +95,21 @@ class PeecClient:
         r.raise_for_status()
         return r.json()
 
-    async def create_prompt(self, text: str, country_code: str = "US") -> dict:
+    async def create_prompt(
+        self,
+        text: str,
+        country_code: str = "US",
+        topic_id: str | None = None,
+    ) -> dict:
         self._require_project()
+        payload: dict[str, Any] = {
+            "text": text[:200],
+            "country_code": country_code,
+        }
+        if topic_id:
+            payload["topic_id"] = topic_id
         r = await self._client.post(
-            "/prompts",
-            params=self._params(),
-            json={"text": text, "country_code": country_code},
+            "/prompts", params=self._params(), json=payload
         )
         r.raise_for_status()
         return r.json()
@@ -121,6 +130,82 @@ class PeecClient:
                 }
 
         return await asyncio.gather(*(one(t) for t in texts))
+
+    async def list_topics(self) -> list[dict]:
+        self._require_project()
+        r = await self._client.get(
+            "/topics", params=self._params({"limit": 500})
+        )
+        r.raise_for_status()
+        return r.json().get("data", [])
+
+    async def create_topic(self, name: str) -> dict:
+        self._require_project()
+        r = await self._client.post(
+            "/topics", params=self._params(), json={"name": name[:64]}
+        )
+        r.raise_for_status()
+        body = r.json()
+        return body.get("data") or body
+
+    async def ensure_topic(self, name: str) -> str:
+        """Get or create a topic by name; returns topic_id."""
+        name = name.strip()
+        if not name:
+            raise ValueError("topic name required")
+        for t in await self.list_topics():
+            if (t.get("name") or "").strip().lower() == name.lower():
+                return t["id"]
+        created = await self.create_topic(name)
+        return created["id"]
+
+    async def create_prompts_with_topics(
+        self,
+        items: list[dict],
+        country_code: str = "US",
+    ) -> list[dict]:
+        """Create prompts where each item is {text, topic?: str}.
+
+        Topics are resolved (or created) once per unique name to avoid
+        duplicate POST /topics calls. Returns one result row per input.
+        """
+        unique_topics = {
+            (i.get("topic") or "").strip()
+            for i in items
+            if (i.get("topic") or "").strip()
+        }
+        topic_ids: dict[str, str] = {}
+        for name in unique_topics:
+            try:
+                topic_ids[name] = await self.ensure_topic(name)
+            except httpx.HTTPStatusError as e:
+                topic_ids[name] = ""  # fall back to "no topic" on this name
+                print(f"[peec] ensure_topic({name!r}) failed: {e.response.status_code}")
+
+        async def one(item: dict) -> dict:
+            text = (item.get("text") or "").strip()
+            topic_name = (item.get("topic") or "").strip()
+            topic_id = topic_ids.get(topic_name) if topic_name else None
+            if not text:
+                return {"text": text, "ok": False, "error": "empty text"}
+            try:
+                created = await self.create_prompt(text, country_code, topic_id or None)
+                return {
+                    "text": text,
+                    "topic": topic_name,
+                    "ok": True,
+                    "id": created.get("id"),
+                }
+            except httpx.HTTPStatusError as e:
+                return {
+                    "text": text,
+                    "topic": topic_name,
+                    "ok": False,
+                    "status": e.response.status_code,
+                    "error": e.response.text,
+                }
+
+        return await asyncio.gather(*(one(i) for i in items))
 
     async def _report(
         self,
