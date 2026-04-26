@@ -187,7 +187,7 @@ export default function Settings() {
             </select>
             <div className="mt-2">
               <button
-                onClick={() => bootstrapRiskPrompts.mutate()}
+                onClick={() => bootstrapRiskPrompts.mutate(undefined)}
                 disabled={!currentProjectId || bootstrapRiskPrompts.isPending}
                 className="bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-xs"
               >
