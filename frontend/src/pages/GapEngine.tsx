@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   BarChart3,
   CheckCircle2,
@@ -22,10 +23,11 @@ import {
   prompts,
   topics,
   urlReportRows,
-} from "../data/adblume-snapshot";
-import { makeGapAction, makeLaunchPack } from "../lib/adblume/actions";
-import { getQueryGaps, summarizeByIntent } from "../lib/adblume/gaps";
-import type { QueryGap } from "../lib/adblume/types";
+} from "../data/gap-engine-sample";
+import { makeGapAction, makeLaunchPack } from "../lib/gap-engine/actions";
+import { getQueryGaps, summarizeByIntent, type BrandContext } from "../lib/gap-engine/gaps";
+import type { QueryGap } from "../lib/gap-engine/types";
+import { useCurrentSelection } from "../hooks/useCurrentSelection";
 
 type Tab = "gaps" | "fit" | "actions" | "setup";
 
@@ -35,14 +37,6 @@ const tabs: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
   { id: "actions", label: "Action Plan", icon: ClipboardCheck },
   { id: "setup", label: "Setup & Measurement", icon: Settings2 },
 ];
-
-const intentLabels: Record<QueryGap["customerIntent"], string> = {
-  hire_studio: "Hire a studio",
-  compare_vendors: "Compare vendors",
-  explore_ai: "Explore AI",
-  launch_ecommerce: "Launch ecommerce",
-  evaluate_adblume: "Evaluate Adblume",
-};
 
 const stateLabels: Record<QueryGap["gapState"], string> = {
   untracked_opportunity: "Untracked",
@@ -85,11 +79,54 @@ function formatPercent(value?: number) {
   return `${Math.round(value * 100)}%`;
 }
 
-export default function Adblume() {
-  const initialGaps = useMemo(() => getQueryGaps(), []);
+export default function GapEngine() {
+  const selection = useCurrentSelection();
+
+  if (!selection.isConfigured) {
+    return (
+      <div className="shell">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Peec AI hackathon build</p>
+            <h1>Query Gap + Action Engine</h1>
+            <p className="subhead">
+              Detect customer query gaps, validate brand fit, and generate the next action to win AI-search visibility.
+            </p>
+          </div>
+        </header>
+        <section className="panel" style={{ padding: 32, textAlign: "center" }}>
+          <p className="muted">
+            No project/brand selected. Choose one in{" "}
+            <Link to="/settings" style={{ textDecoration: "underline" }}>
+              Settings
+            </Link>{" "}
+            to run the gap engine.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  return <GapEngineBody brandName={selection.brandName} projectName={selection.projectName} />;
+}
+
+function GapEngineBody({ brandName, projectName }: { brandName: string; projectName: string }) {
+  const ctx = useMemo<BrandContext>(
+    () => ({ brandName, ownBrandKey: brandName.toLowerCase() }),
+    [brandName],
+  );
+  const initialGaps = useMemo(() => getQueryGaps(ctx), [ctx]);
   const [tab, setTab] = useState<Tab>("gaps");
   const [selectedId, setSelectedId] = useState(initialGaps[0]?.id ?? "");
   const [approvalById, setApprovalById] = useState<Record<string, QueryGap["approvalStatus"]>>({});
+
+  const intentLabels: Record<QueryGap["customerIntent"], string> = {
+    hire_studio: "Hire a studio",
+    compare_vendors: "Compare vendors",
+    explore_ai: "Explore AI",
+    launch_ecommerce: "Launch ecommerce",
+    evaluate_brand: `Evaluate ${brandName}`,
+  };
 
   const gaps = useMemo(
     () =>
@@ -100,11 +137,11 @@ export default function Adblume() {
     [approvalById, initialGaps],
   );
   const selected = gaps.find((gap) => gap.id === selectedId) ?? gaps[0];
-  const action = selected ? makeGapAction(selected) : null;
+  const action = selected ? makeGapAction(selected, ctx) : null;
   const intentSummary = summarizeByIntent(gaps);
   const approvedCount = gaps.filter((gap) => gap.approvalStatus === "approved").length;
   const rejectedCount = gaps.filter((gap) => gap.approvalStatus === "rejected").length;
-  const launchPack = makeLaunchPack(gaps);
+  const launchPack = makeLaunchPack(gaps, ctx);
   const measuredGaps = gaps.filter((gap) => gap.gapState === "measured_gap");
   const biggestGap = measuredGaps.reduce(
     (current, gap) => Math.max(current, gap.visibilityGap ?? 0),
@@ -121,13 +158,18 @@ export default function Adblume() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Peec AI hackathon build</p>
-          <h1>Adblume Query Gap + Action Engine</h1>
+          <h1>Query Gap + Action Engine</h1>
           <p className="subhead">
-            Detect customer query gaps, validate brand fit, and generate the next action to win AI-search visibility.
+            Active brand: <strong>{brandName}</strong>
+            {projectName ? <span className="muted"> · {projectName}</span> : null}
+            {" — "}detect customer query gaps, validate brand fit, and generate the next action to win AI-search visibility.{" "}
+            <Link to="/settings" style={{ textDecoration: "underline" }}>
+              Change in Settings
+            </Link>
           </p>
         </div>
         <div className="topbarCard">
-          <span>Measured mode</span>
+          <span>Sample dataset</span>
           <strong>{project.chatCount} Peec chats · {project.reportDate}</strong>
         </div>
       </header>
@@ -205,9 +247,9 @@ export default function Adblume() {
           </div>
 
           <aside className="panel detail">
-            <DetailHeader gap={selected} />
-            <ScoreBreakdown gap={selected} />
-            <MeasuredBreakdown gap={selected} />
+            <DetailHeader gap={selected} brandName={brandName} />
+            <ScoreBreakdown gap={selected} brandName={brandName} />
+            <MeasuredBreakdown gap={selected} brandName={brandName} />
             <div className="sectionBlock">
               <h3>Where customers are searching</h3>
               <div className="intentList">
@@ -237,7 +279,7 @@ export default function Adblume() {
               <h3>{selected.query}</h3>
               <p>
                 This query maps to a {selected.funnelStage} buyer moment and supports{" "}
-                {selected.alignedPropositions.join(", ") || "Adblume's core positioning"}.
+                {selected.alignedPropositions.join(", ") || `${brandName}'s core positioning`}.
               </p>
             </div>
             <div className="reviewGrid">
@@ -260,7 +302,7 @@ export default function Adblume() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="muted">No off-brand terms detected. Review the final wording for luxury positioning.</p>
+                  <p className="muted">No off-brand terms detected. Review the final wording for brand positioning.</p>
                 )}
               </div>
             </div>
@@ -271,8 +313,8 @@ export default function Adblume() {
             </div>
           </div>
           <aside className="panel detail">
-            <ScoreBreakdown gap={selected} />
-            <MeasuredBreakdown gap={selected} />
+            <ScoreBreakdown gap={selected} brandName={brandName} />
+            <MeasuredBreakdown gap={selected} brandName={brandName} />
             <div className="sectionBlock">
               <h3>Winning competitors</h3>
               <div className="chipList">
@@ -379,11 +421,11 @@ export default function Adblume() {
             </div>
             <p className="muted">Rejected gaps are excluded. This is ready to move into Notion, Docs, or Linear.</p>
             <div className="downloadLinks">
-              <a href="/adblume-implementation-plan.pdf" download>
+              <a href="/gap-engine-implementation-plan.pdf" download>
                 <Download size={15} />
                 Download PDF plan
               </a>
-              <a href="/adblume-implementation-plan.md" download>
+              <a href="/gap-engine-implementation-plan.md" download>
                 <FileText size={15} />
                 Download Markdown brief
               </a>
@@ -399,14 +441,14 @@ export default function Adblume() {
             <div className="panelHeader">
               <div>
                 <p className="eyebrow">Peec setup</p>
-                <h2>{brandProfile.name}</h2>
+                <h2>{brandName}</h2>
               </div>
-              <span className="pill ok">Own brand configured</span>
+              <span className="pill ok">Active brand</span>
             </div>
             <p className="brandDesc">{brandProfile.description}</p>
             <div className="setupGrid">
-              <SetupItem icon={CheckCircle2} title="Own brand" value={`${brandProfile.name} · ${brandProfile.domain}`} />
-              <SetupItem icon={Compass} title="Project" value={project.id} />
+              <SetupItem icon={CheckCircle2} title="Own brand" value={`${brandName} · ${brandProfile.domain}`} />
+              <SetupItem icon={Compass} title="Project" value={projectName || project.id} />
               <SetupItem icon={Gauge} title="Competitors" value={`${brands.filter((brand) => !brand.isOwn).length} brands configured`} />
               <SetupItem icon={FileText} title="Prompts" value={`${prompts.length} Peec prompts seeded`} />
               <SetupItem icon={BarChart3} title="Topics" value={`${topics.length} query buckets`} />
@@ -455,7 +497,7 @@ export default function Adblume() {
   );
 }
 
-function DetailHeader({ gap }: { gap?: QueryGap }) {
+function DetailHeader({ gap, brandName }: { gap?: QueryGap; brandName: string }) {
   if (!gap) return null;
   return (
     <>
@@ -468,7 +510,7 @@ function DetailHeader({ gap }: { gap?: QueryGap }) {
       </div>
       <p className="muted">
         {gap.gapState === "measured_gap"
-          ? `Measured by Peec today: Adblume ${formatPercent(gap.ownVisibility)} vs competitor leader ${formatPercent(gap.competitorVisibility)}.`
+          ? `Measured by Peec today: ${brandName} ${formatPercent(gap.ownVisibility)} vs competitor leader ${formatPercent(gap.competitorVisibility)}.`
           : gap.gapState === "untracked_opportunity"
             ? "Local opportunity: add this to Peec when more credits are available."
             : gap.gapState === "simulated_competitor_gap"
@@ -479,13 +521,13 @@ function DetailHeader({ gap }: { gap?: QueryGap }) {
   );
 }
 
-function MeasuredBreakdown({ gap }: { gap?: QueryGap }) {
+function MeasuredBreakdown({ gap, brandName }: { gap?: QueryGap; brandName: string }) {
   if (!gap || gap.gapState !== "measured_gap") return null;
   return (
     <div className="sectionBlock">
       <h3>Measured Peec baseline</h3>
       <div className="miniStats">
-        <span>Adblume visibility <b>{formatPercent(gap.ownVisibility)}</b></span>
+        <span>{brandName} visibility <b>{formatPercent(gap.ownVisibility)}</b></span>
         <span>Competitor leader <b>{formatPercent(gap.competitorVisibility)}</b></span>
         <span>Visibility gap <b>{formatPercent(gap.visibilityGap)}</b></span>
         <span>Mentions <b>{gap.mentionCount ?? 0}</b></span>
@@ -503,13 +545,13 @@ function MeasuredBreakdown({ gap }: { gap?: QueryGap }) {
   );
 }
 
-function ScoreBreakdown({ gap }: { gap?: QueryGap }) {
+function ScoreBreakdown({ gap, brandName }: { gap?: QueryGap; brandName: string }) {
   if (!gap) return null;
-  const scores = [
+  const scores: Array<[string, number]> = [
     ["Intent", gap.intentScore],
     ["Sentiment fit", gap.sentimentFitScore],
     ["Competitor pressure", gap.competitorPressureScore],
-    ["Adblume fit", gap.adblumeFitScore],
+    [`${brandName} fit`, gap.brandFitScore],
     ["Content gap", gap.contentGapScore],
   ];
   return (

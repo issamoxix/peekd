@@ -26,7 +26,7 @@ const navItems = [
   { to: "/prompts", icon: Wand2, label: "Prompt Studio" },
   { to: "/agents", icon: Bot, label: "Peec AI Agents" },
   { to: "/analyzer", icon: FileText, label: "Brand Analyzer" },
-  { to: "/adblume", icon: Search, label: "Adblume Gap Engine" },
+  { to: "/gap-engine", icon: Search, label: "Gap Engine" },
   { to: "/settings", icon: SettingsIcon, label: "Settings" },
 ];
 

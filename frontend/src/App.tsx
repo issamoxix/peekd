@@ -3,7 +3,7 @@ import { Sidebar, SelectionBanner } from "./components/layout";
 import { Analyzer } from "./pages/Analyzer";
 import Agents from "./pages/Agents";
 import PromptStudio from "./pages/PromptStudio";
-import Adblume from "./pages/Adblume";
+import GapEngine from "./pages/GapEngine";
 import Dashboard from "./pages/Dashboard";
 import HeatMap from "./pages/HeatMap";
 import ThreatCenter from "./pages/ThreatCenter";
@@ -13,7 +13,7 @@ import Competitors from "./pages/Competitors";
 import CrawlerConfig from "./pages/CrawlerConfig";
 import Settings from "./pages/Settings";
 
-const HIDE_BANNER_ON = new Set(["/settings", "/adblume"]);
+const HIDE_BANNER_ON = new Set(["/settings", "/gap-engine"]);
 
 function MainArea() {
   const { pathname } = useLocation();
@@ -34,7 +34,7 @@ function MainArea() {
         <Route path="/agents" element={<Agents />} />
         <Route path="/prompts" element={<PromptStudio />} />
         <Route path="/analyzer" element={<Analyzer />} />
-        <Route path="/adblume" element={<Adblume />} />
+        <Route path="/gap-engine" element={<GapEngine />} />
         <Route path="/settings" element={<Settings />} />
       </Routes>
     </main>

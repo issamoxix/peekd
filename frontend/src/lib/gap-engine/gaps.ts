@@ -6,8 +6,15 @@ import {
   topics,
   untrackedQueries,
   urlReportRows,
-} from "../../data/adblume-snapshot";
+} from "../../data/gap-engine-sample";
 import type { BrandReportRow, Prompt, QueryGap } from "./types";
+
+export interface BrandContext {
+  /** Display name shown in UI/copy (e.g., the active brand from Settings). */
+  brandName: string;
+  /** Lowercase token used to detect the brand in query text. */
+  ownBrandKey?: string;
+}
 
 const competitors = brands.filter((brand) => !brand.isOwn).map((brand) => brand.name);
 
@@ -28,6 +35,10 @@ const positiveFitTerms = [
 
 const lowFitTerms = ["cheap", "free", "bulk-only", "generic product photos", "low cost"];
 
+function ownKey(ctx: BrandContext): string {
+  return (ctx.ownBrandKey ?? ctx.brandName).toLowerCase();
+}
+
 function includesAny(text: string, terms: string[]) {
   return terms.some((term) => text.includes(term));
 }
@@ -39,9 +50,10 @@ function scoreByTerms(text: string, terms: string[], base = 0, step = 12, max = 
   );
 }
 
-function classifyIntent(query: string): QueryGap["customerIntent"] {
+function classifyIntent(query: string, ctx: BrandContext): QueryGap["customerIntent"] {
   const text = query.toLowerCase();
-  if (text.includes("adblume")) return "evaluate_adblume";
+  const key = ownKey(ctx);
+  if (key && text.includes(key)) return "evaluate_brand";
   if (includesAny(text, ["vs", "alternatives", "compare"])) return "compare_vendors";
   if (includesAny(text, ["ai", "tool", "retouching"])) return "explore_ai";
   if (includesAny(text, ["catalog", "shopify", "ecommerce", "marketplace"])) return "launch_ecommerce";
@@ -80,11 +92,13 @@ function alignedPropositions(query: string) {
   return Array.from(propositions);
 }
 
-function riskFlags(query: string) {
+function riskFlags(query: string, ctx: BrandContext) {
   const text = query.toLowerCase();
   const flags = lowFitTerms.filter((term) => text.includes(term)).map((term) => `Potentially off-positioning: ${term}`);
   if (text.includes("tool")) {
-    flags.push("Query may imply a self-serve software tool; position Adblume as an AI-assisted service, not SaaS.");
+    flags.push(
+      `Query may imply a self-serve software tool; position ${ctx.brandName} as an AI-assisted service, not SaaS.`,
+    );
   }
   return flags;
 }
@@ -133,6 +147,7 @@ function buildGap(
   query: string,
   topicName: string,
   gapState: QueryGap["gapState"],
+  ctx: BrandContext,
   promptId?: string,
   measured?: {
     own?: BrandReportRow;
@@ -157,13 +172,13 @@ function buildGap(
       ? Math.max(0, competitorVisibility - ownVisibility)
       : undefined;
   const intentScore = scoreByTerms(text, ["best", "studio", "service", "partner", "pricing", "hire"], 22, 12);
-  const sentimentFitScore = Math.max(12, scoreByTerms(text, positiveFitTerms, 18, 8) - riskFlags(query).length * 24);
+  const sentimentFitScore = Math.max(12, scoreByTerms(text, positiveFitTerms, 18, 8) - riskFlags(query, ctx).length * 24);
   const competitorPressureScore = Math.min(
     100,
     scoreByTerms(text, ["vs", "alternatives", "compare", "best", "tool", "studio"], 12, 12) +
       Math.round((competitorVisibility ?? 0) * 45),
   );
-  const adblumeFitScore = scoreByTerms(text, ["jewelry", "fine jewelry", "luxury", "ai", "video", "catalog", "ecommerce"], 20, 10);
+  const brandFitScore = scoreByTerms(text, ["jewelry", "fine jewelry", "luxury", "ai", "video", "catalog", "ecommerce"], 20, 10);
   const contentGapScore = Math.min(
     100,
     scoreByTerms(text, ["pricing", "alternatives", "vs", "best", "service", "studio", "tool"], 18, 10) +
@@ -171,13 +186,13 @@ function buildGap(
   );
   const gapStateBonus =
     gapState === "measured_gap" ? Math.round((visibilityGap ?? 0) * 32) : gapState === "untracked_opportunity" ? 10 : 4;
-  const riskPenalty = riskFlags(query).length * 18;
+  const riskPenalty = riskFlags(query, ctx).length * 18;
   const totalScore = Math.max(
     0,
     Math.min(
       100,
       Math.round(
-        (intentScore + sentimentFitScore + competitorPressureScore + adblumeFitScore + contentGapScore) / 5 +
+        (intentScore + sentimentFitScore + competitorPressureScore + brandFitScore + contentGapScore) / 5 +
           gapStateBonus -
           riskPenalty,
       ),
@@ -190,13 +205,13 @@ function buildGap(
     query,
     promptId,
     topicName,
-    customerIntent: classifyIntent(query),
+    customerIntent: classifyIntent(query, ctx),
     funnelStage: classifyFunnel(query),
     gapState,
     intentScore,
     sentimentFitScore,
     competitorPressureScore,
-    adblumeFitScore,
+    brandFitScore,
     contentGapScore,
     totalScore,
     scoreLabel: totalScore >= 78 ? "High" : totalScore >= 58 ? "Medium" : "Low",
@@ -204,7 +219,7 @@ function buildGap(
       ? winningCompetitors.map((competitor) => competitor.brand)
       : heuristicCompetitors(query),
     alignedPropositions: alignedPropositions(query),
-    riskFlags: riskFlags(query),
+    riskFlags: riskFlags(query, ctx),
     approvalStatus: totalScore >= 78 ? "approved" : "pending",
     recommendedAction: routeAction(query),
     ownVisibility,
@@ -223,7 +238,7 @@ function topicNameForPrompt(prompt: Prompt) {
   return topics.find((topic) => topic.id === prompt.topicId)?.name ?? "Uncategorized";
 }
 
-export function getQueryGaps() {
+export function getQueryGaps(ctx: BrandContext) {
   const ownBrand = brands.find((brand) => brand.isOwn);
   const tracked = prompts.map((prompt) => {
     const rows = brandReportRows.filter((row) => row.promptId === prompt.id);
@@ -234,12 +249,13 @@ export function getQueryGaps() {
       prompt.text,
       topicNameForPrompt(prompt),
       rows.length ? "measured_gap" : "tracked_pending",
+      ctx,
       prompt.id,
       rows.length ? { own, competitors: competitorRows } : undefined,
     );
   });
   const untracked = untrackedQueries.map((query) =>
-    buildGap(query.id, query.query, query.topicName, "untracked_opportunity"),
+    buildGap(query.id, query.query, query.topicName, "untracked_opportunity", ctx),
   );
   return [...tracked, ...untracked].sort((a, b) => b.totalScore - a.totalScore);
 }

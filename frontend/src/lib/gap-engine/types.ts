@@ -74,7 +74,7 @@ export type QueryGap = {
     | "compare_vendors"
     | "explore_ai"
     | "launch_ecommerce"
-    | "evaluate_adblume";
+    | "evaluate_brand";
   funnelStage: "awareness" | "consideration" | "decision";
   gapState:
     | "untracked_opportunity"
@@ -84,7 +84,7 @@ export type QueryGap = {
   intentScore: number;
   sentimentFitScore: number;
   competitorPressureScore: number;
-  adblumeFitScore: number;
+  brandFitScore: number;
   contentGapScore: number;
   totalScore: number;
   scoreLabel: "High" | "Medium" | "Low";

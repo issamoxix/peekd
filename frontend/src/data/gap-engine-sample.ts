@@ -1,4 +1,4 @@
-import type { Brand, BrandReportRow, DomainReportRow, Prompt, Topic, UntrackedQuery, UrlReportRow } from "../lib/adblume/types";
+import type { Brand, BrandReportRow, DomainReportRow, Prompt, Topic, UntrackedQuery, UrlReportRow } from "../lib/gap-engine/types";
 
 export const project = {
   id: "or_b66c25fc-f93d-4697-a3bb-c5e1b527a0f4",
