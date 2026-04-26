@@ -31,7 +31,7 @@ export function StrategyResults({ strategy, onToggleQuickWin }: StrategyResultsP
               className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
                 activeTab === tab.key
                   ? "border-teal text-teal"
-                  : "border-transparent text-gray-500 hover:text-gray-700"
+                  : "border-transparent text-muted hover:text-muted"
               }`}
             >
               {tab.label}
@@ -70,7 +70,7 @@ function QuickWinsPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           {completedCount} of {quickWins.length} completed
         </p>
         <div className="w-32 bg-gray-200 rounded-full h-2">
@@ -98,7 +98,7 @@ function QuickWinsPanel({
               className="mt-1 h-4 w-4 text-teal border-gray-300 rounded focus:ring-teal"
             />
             <span
-              className={`text-sm ${qw.completed ? "text-gray-500 line-through" : "text-gray-700"}`}
+              className={`text-sm ${qw.completed ? "text-muted line-through" : "text-muted"}`}
             >
               {qw.description}
             </span>
@@ -123,13 +123,13 @@ function ArticlesPanel({ articles }: { articles: ContentStrategy["articles"] }) 
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="font-medium text-gray-900">{article.title}</h4>
-                <p className="text-sm text-gray-500 mt-1">Target: "{article.targetQuery}"</p>
+                <p className="text-sm text-muted mt-1">Target: "{article.targetQuery}"</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs px-2 py-1 bg-gray-100 rounded">{article.schemaType}</span>
-                <span className="text-xs text-gray-500">{article.wordCount} words</span>
+                <span className="text-xs text-muted">{article.wordCount} words</span>
                 <svg
-                  className={`w-5 h-5 text-gray-400 transition-transform ${
+                  className={`w-5 h-5 text-muted transition-transform ${
                     expandedId === article.id ? "rotate-180" : ""
                   }`}
                   fill="none"
@@ -144,10 +144,10 @@ function ArticlesPanel({ articles }: { articles: ContentStrategy["articles"] }) 
             {expandedId === article.id && (
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase">Key Claims</p>
+                  <p className="text-xs font-medium text-muted uppercase">Key Claims</p>
                   <ul className="mt-1 space-y-1">
                     {article.keyClaims.map((claim, i) => (
-                      <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                      <li key={i} className="text-sm text-muted flex items-start gap-2">
                         <span className="text-teal">•</span>
                         {claim}
                       </li>
@@ -156,7 +156,7 @@ function ArticlesPanel({ articles }: { articles: ContentStrategy["articles"] }) 
                 </div>
                 {article.internalLinkingTargets.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase">Internal Links</p>
+                    <p className="text-xs font-medium text-muted uppercase">Internal Links</p>
                     <div className="mt-1 flex flex-wrap gap-2">
                       {article.internalLinkingTargets.map((target, i) => (
                         <span key={i} className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">
@@ -189,10 +189,10 @@ function StructuredDataPanel({ structuredData }: { structuredData: ContentStrate
             <div className="flex items-start justify-between">
               <div>
                 <h4 className="font-medium text-gray-900">{schema.schemaType}</h4>
-                <p className="text-sm text-gray-500 mt-1">{schema.purpose}</p>
+                <p className="text-sm text-muted mt-1">{schema.purpose}</p>
               </div>
               <svg
-                className={`w-5 h-5 text-gray-400 transition-transform ${
+                className={`w-5 h-5 text-muted transition-transform ${
                   expandedId === schema.id ? "rotate-180" : ""
                 }`}
                 fill="none"
@@ -206,11 +206,11 @@ function StructuredDataPanel({ structuredData }: { structuredData: ContentStrate
             {expandedId === schema.id && (
               <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase">Gap Addressed</p>
-                  <p className="text-sm text-gray-700 mt-1">{schema.gapAddressed}</p>
+                  <p className="text-xs font-medium text-muted uppercase">Gap Addressed</p>
+                  <p className="text-sm text-muted mt-1">{schema.gapAddressed}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase">JSON-LD</p>
+                  <p className="text-xs font-medium text-muted uppercase">JSON-LD</p>
                   <pre className="mt-1 p-3 bg-gray-50 rounded text-xs overflow-x-auto">
                     {schema.jsonLd}
                   </pre>
@@ -236,15 +236,15 @@ function PRAnglesPanel({ prAngles }: { prAngles: ContentStrategy["prAngles"] }) 
                 {angle.publicationType}
               </span>
             </div>
-            <p className="text-sm text-gray-600">{angle.hook}</p>
+            <p className="text-sm text-muted">{angle.hook}</p>
             <div className="flex gap-4 text-sm">
               <div>
-                <span className="text-gray-500">Data point:</span>{" "}
-                <span className="text-gray-700">{angle.keyDataPoint}</span>
+                <span className="text-muted">Data point:</span>{" "}
+                <span className="text-muted">{angle.keyDataPoint}</span>
               </div>
             </div>
             <div className="pt-2 border-t border-gray-100">
-              <span className="text-xs text-gray-500">Supports claim:</span>{" "}
+              <span className="text-xs text-muted">Supports claim:</span>{" "}
               <span className="text-xs text-teal">{angle.targetClaim}</span>
             </div>
           </div>

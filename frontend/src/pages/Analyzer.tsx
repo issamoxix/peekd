@@ -42,14 +42,14 @@ function ProjectPicker() {
   };
 
   return (
-    <div className="bg-gray-900 rounded-xl border border-gray-800 p-4 mb-6">
+    <div className="bg-panel rounded-xl border border-soft-line p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">Analyzer Projects</h2>
+        <h2 className="text-sm font-semibold text-ink">Analyzer Projects</h2>
         <Button onClick={handleNewProject} disabled={createProject.isPending}>
           {createProject.isPending ? "Creating..." : "+ New Project"}
         </Button>
       </div>
-      {isLoading && <p className="text-gray-500 text-sm">Loading…</p>}
+      {isLoading && <p className="text-muted text-sm">Loading…</p>}
       <div className="flex flex-wrap gap-2">
         {projects?.map((project: Project) => (
           <button
@@ -60,8 +60,8 @@ function ProjectPicker() {
             }}
             className={`px-3 py-2 rounded-lg text-sm transition-colors ${
               currentProjectId === project.id
-                ? "bg-blue-600 text-white"
-                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                ? "bg-sage text-ink"
+                : "bg-pearl text-ink hover:bg-pearl"
             }`}
           >
             <span className="font-medium">{project.name}</span>
@@ -69,7 +69,7 @@ function ProjectPicker() {
           </button>
         ))}
         {projects?.length === 0 && (
-          <p className="text-gray-500 text-sm">No projects yet — create one to begin.</p>
+          <p className="text-muted text-sm">No projects yet — create one to begin.</p>
         )}
       </div>
     </div>
@@ -80,7 +80,7 @@ function AnalyzerTabs() {
   const { activeTab, setActiveTab } = useProjectContext();
 
   return (
-    <div className="border-b border-gray-800 mb-6">
+    <div className="border-b border-soft-line mb-6">
       <nav className="flex gap-8">
         {TABS.map((tab, index) => (
           <button
@@ -88,8 +88,8 @@ function AnalyzerTabs() {
             onClick={() => setActiveTab(index)}
             className={`pb-3 px-1 border-b-2 font-medium text-sm transition-colors ${
               activeTab === index
-                ? "border-blue-500 text-blue-400"
-                : "border-transparent text-gray-500 hover:text-gray-300"
+                ? "border-blue-500 text-sage"
+                : "border-transparent text-muted hover:text-ink"
             }`}
           >
             {tab}
@@ -105,7 +105,7 @@ function AnalyzerBody() {
 
   if (!currentProjectId) {
     return (
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-12 text-center text-gray-400">
+      <div className="bg-panel rounded-xl border border-soft-line p-12 text-center text-muted">
         Select or create a project to run the brand-gap analyzer.
       </div>
     );
@@ -117,7 +117,7 @@ function AnalyzerBody() {
       {activeTab === 0 && <GapAnalysisTab />}
       {activeTab === 1 && <ContentStrategyTab />}
       {activeTab === 2 && (
-        <div className="text-gray-600">Progress Tracker tab — coming soon</div>
+        <div className="text-muted">Progress Tracker tab — coming soon</div>
       )}
     </div>
   );
@@ -128,8 +128,8 @@ export function Analyzer() {
     <ProjectProvider>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Brand Analyzer</h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-ink">Brand Analyzer</h1>
+          <p className="text-muted text-sm mt-1">
             Gap analysis and content strategy powered by Peec AI + Claude
           </p>
         </div>

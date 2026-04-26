@@ -28,7 +28,7 @@ export function GapAnalysisTab() {
     if (!isComplete) {
       return (
         <Card title="Analysis">
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted">
             <p className="mb-2">Complete the brand brief to run analysis</p>
             <p className="text-sm">Fill in at least brand name, domain, category, and desired claims</p>
           </div>
@@ -71,7 +71,7 @@ export function GapAnalysisTab() {
               </svg>
             </div>
             <p className="text-red-600 font-medium mb-2">Analysis failed</p>
-            <p className="text-sm text-gray-600 mb-4">{error.message}</p>
+            <p className="text-sm text-muted mb-4">{error.message}</p>
             <Button onClick={handleRunAnalysis}>Try Again</Button>
           </div>
         </Card>
@@ -83,7 +83,7 @@ export function GapAnalysisTab() {
       return (
         <Card title="Analysis">
           <div className="text-center py-12">
-            <p className="text-gray-500">Loading analysis...</p>
+            <p className="text-muted">Loading analysis...</p>
           </div>
         </Card>
       );
@@ -123,8 +123,8 @@ export function GapAnalysisTab() {
               />
             </svg>
           </div>
-          <p className="text-gray-600 mb-2">Ready to analyze how LLMs describe your brand</p>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-muted mb-2">Ready to analyze how LLMs describe your brand</p>
+          <p className="text-sm text-muted mb-6">
             We will fetch reports from Peec AI and synthesize gaps between current and desired positioning.
           </p>
           <Button onClick={handleRunAnalysis}>Run Analysis</Button>

@@ -46,43 +46,43 @@ export default function CrawlerConfig() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Crawler Configuration</h1>
-        <p className="text-gray-400 text-sm mt-1">Manage AI crawler access to your content</p>
+        <h1 className="text-2xl font-bold text-ink">Crawler Configuration</h1>
+        <p className="text-muted text-sm mt-1">Manage AI crawler access to your content</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Configuration */}
         <div className="space-y-6">
           {/* Strategy Selector */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Strategy</h2>
+          <div className="bg-panel rounded-xl border border-soft-line p-6">
+            <h2 className="text-lg font-semibold text-ink mb-4">Strategy</h2>
             <div className="space-y-3">
               {strategies.map(s => (
-                <label key={s.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${strategy === s.id ? 'border-blue-500 bg-blue-500/10' : 'border-gray-800 hover:border-gray-700'}`}>
-                  <input type="radio" name="strategy" value={s.id} checked={strategy === s.id} onChange={() => setStrategy(s.id)} className="text-blue-500" />
+                <label key={s.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${strategy === s.id ? 'border-blue-500 bg-sage-soft' : 'border-soft-line hover:border-line'}`}>
+                  <input type="radio" name="strategy" value={s.id} checked={strategy === s.id} onChange={() => setStrategy(s.id)} className="text-sage" />
                   <div>
-                    <div className="text-sm font-medium text-white">{s.name}</div>
-                    <div className="text-xs text-gray-400">{s.desc}</div>
+                    <div className="text-sm font-medium text-ink">{s.name}</div>
+                    <div className="text-xs text-muted">{s.desc}</div>
                   </div>
                 </label>
               ))}
             </div>
-            <button onClick={handleGenerate} className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+            <button onClick={handleGenerate} className="mt-4 w-full bg-sage hover:bg-sage text-ink px-4 py-2 rounded-lg text-sm font-medium">
               Generate Configuration
             </button>
           </div>
 
           {/* Crawler List */}
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">AI Crawlers</h2>
+          <div className="bg-panel rounded-xl border border-soft-line p-6">
+            <h2 className="text-lg font-semibold text-ink mb-4">AI Crawlers</h2>
             <div className="space-y-2">
               {crawlers.map(c => (
-                <div key={c.name} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+                <div key={c.name} className="flex items-center justify-between p-3 bg-pearl/50 rounded-lg">
                   <div className="flex items-center gap-3">
-                    <Bot className="w-4 h-4 text-gray-400" />
+                    <Bot className="w-4 h-4 text-muted" />
                     <div>
-                      <div className="text-sm text-white">{c.name}</div>
-                      <div className="text-xs text-gray-500">{c.desc}</div>
+                      <div className="text-sm text-ink">{c.name}</div>
+                      <div className="text-xs text-muted">{c.desc}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -97,11 +97,11 @@ export default function CrawlerConfig() {
 
         {/* Right: Preview */}
         <div className="space-y-6">
-          <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+          <div className="bg-panel rounded-xl border border-soft-line p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">robots.txt Preview</h2>
+              <h2 className="text-lg font-semibold text-ink">robots.txt Preview</h2>
               <div className="flex gap-2">
-                <button onClick={() => handleCopy(robotsData || '')} className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg">
+                <button onClick={() => handleCopy(robotsData || '')} className="flex items-center gap-1 text-xs bg-pearl hover:bg-pearl text-ink px-3 py-1.5 rounded-lg">
                   {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
@@ -109,26 +109,26 @@ export default function CrawlerConfig() {
                   const blob = new Blob([robotsData || ''], { type: 'text/plain' })
                   const url = URL.createObjectURL(blob)
                   const a = document.createElement('a'); a.href = url; a.download = 'robots.txt'; a.click()
-                }} className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg">
+                }} className="flex items-center gap-1 text-xs bg-pearl hover:bg-pearl text-ink px-3 py-1.5 rounded-lg">
                   <Download className="w-3 h-3" /> Download
                 </button>
               </div>
             </div>
-            <pre className="bg-gray-950 rounded-lg p-4 text-xs text-green-400 font-mono overflow-auto max-h-[500px] whitespace-pre-wrap border border-gray-800">
+            <pre className="bg-paper rounded-lg p-4 text-xs text-green-400 font-mono overflow-auto max-h-[500px] whitespace-pre-wrap border border-soft-line">
               {robotsData || 'Click "Generate Configuration" to preview'}
             </pre>
           </div>
 
           {/* Cloudflare Rules */}
           {generate.data && (
-            <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Cloudflare WAF Rules</h2>
+            <div className="bg-panel rounded-xl border border-soft-line p-6">
+              <h2 className="text-lg font-semibold text-ink mb-4">Cloudflare WAF Rules</h2>
               <div className="space-y-3">
                 {((generate.data as any).data?.cloudflare_rules ?? []).map((rule: any, i: number) => (
-                  <div key={i} className="bg-gray-800/50 rounded-lg p-4">
-                    <div className="text-sm font-medium text-white mb-1">{rule.name}</div>
-                    <div className="text-xs text-gray-400 mb-2">{rule.description}</div>
-                    <code className="text-xs text-orange-400 bg-gray-950 px-2 py-1 rounded block">{rule.rule}</code>
+                  <div key={i} className="bg-pearl/50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-ink mb-1">{rule.name}</div>
+                    <div className="text-xs text-muted mb-2">{rule.description}</div>
+                    <code className="text-xs text-orange-400 bg-paper px-2 py-1 rounded block">{rule.rule}</code>
                   </div>
                 ))}
               </div>

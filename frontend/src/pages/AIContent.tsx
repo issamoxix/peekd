@@ -16,7 +16,7 @@ function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <button onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-      className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg">
+      className="flex items-center gap-1 text-xs bg-pearl hover:bg-pearl text-ink px-3 py-1.5 rounded-lg">
       {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
       {copied ? 'Copied!' : 'Copy'}
     </button>
@@ -26,7 +26,7 @@ function CopyButton({ text }: { text: string }) {
 function DownloadButton({ text, filename }: { text: string; filename: string }) {
   return (
     <button onClick={() => { const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(new Blob([text], { type: 'text/plain' })), download: filename }); a.click() }}
-      className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg">
+      className="flex items-center gap-1 text-xs bg-pearl hover:bg-pearl text-ink px-3 py-1.5 rounded-lg">
       <Download className="w-3 h-3" /> Download
     </button>
   )
@@ -37,7 +37,7 @@ function PushButton({ label = 'Push to website' }: { label?: string }) {
   return (
     <button
       onClick={() => setPushed(true)}
-      className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${pushed ? 'bg-green-600 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+      className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${pushed ? 'bg-green-600 text-ink' : 'bg-purple-600 hover:bg-purple-700 text-ink'}`}
     >
       {pushed ? <Check className="w-3 h-3" /> : <Send className="w-3 h-3" />}
       {pushed ? 'Pushed to website ✓' : label}
@@ -141,15 +141,15 @@ function CrawlerControl({ brand }: { brand: string }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="space-y-6">
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-base font-semibold text-white mb-4">Crawler Strategy</h2>
+        <div className="bg-panel rounded-xl border border-soft-line p-6">
+          <h2 className="text-base font-semibold text-ink mb-4">Crawler Strategy</h2>
           <div className="space-y-3">
             {strategies.map(s => (
-              <label key={s.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${strategy === s.id ? 'border-blue-500 bg-blue-500/10' : 'border-gray-800 hover:border-gray-700'}`}>
-                <input type="radio" name="strategy" value={s.id} checked={strategy === s.id} onChange={() => { setStrategy(s.id); setGenerated(false) }} className="text-blue-500" />
+              <label key={s.id} className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-colors ${strategy === s.id ? 'border-blue-500 bg-sage-soft' : 'border-soft-line hover:border-line'}`}>
+                <input type="radio" name="strategy" value={s.id} checked={strategy === s.id} onChange={() => { setStrategy(s.id); setGenerated(false) }} className="text-sage" />
                 <div>
-                  <div className="text-sm font-medium text-white">{s.name}</div>
-                  <div className="text-xs text-gray-400">{s.desc}</div>
+                  <div className="text-sm font-medium text-ink">{s.name}</div>
+                  <div className="text-xs text-muted">{s.desc}</div>
                 </div>
               </label>
             ))}
@@ -157,23 +157,23 @@ function CrawlerControl({ brand }: { brand: string }) {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
+            className="mt-4 w-full bg-sage hover:bg-sage disabled:opacity-50 text-ink px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2"
           >
             {isGenerating ? <Loader className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             {isGenerating ? 'Generating…' : 'Generate robots.txt'}
           </button>
         </div>
 
-        <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <h2 className="text-base font-semibold text-white mb-4">AI Crawlers</h2>
+        <div className="bg-panel rounded-xl border border-soft-line p-6">
+          <h2 className="text-base font-semibold text-ink mb-4">AI Crawlers</h2>
           <div className="space-y-2">
             {crawlers.map(c => (
-              <div key={c.name} className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg">
+              <div key={c.name} className="flex items-center justify-between p-3 bg-pearl/50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <Bot className="w-4 h-4 text-gray-400" />
+                  <Bot className="w-4 h-4 text-muted" />
                   <div>
-                    <div className="text-sm text-white">{c.name}</div>
-                    <div className="text-xs text-gray-500">{c.desc}</div>
+                    <div className="text-sm text-ink">{c.name}</div>
+                    <div className="text-xs text-muted">{c.desc}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -186,13 +186,13 @@ function CrawlerControl({ brand }: { brand: string }) {
         </div>
       </div>
 
-      <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+      <div className="bg-panel rounded-xl border border-soft-line p-6">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h2 className="text-base font-semibold text-white">robots.txt Preview</h2>
+          <h2 className="text-base font-semibold text-ink">robots.txt Preview</h2>
           {robotsContent && (
             <div className="flex gap-2 flex-wrap">
               <button onClick={() => { navigator.clipboard.writeText(robotsContent); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-                className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1.5 rounded-lg">
+                className="flex items-center gap-1 text-xs bg-pearl hover:bg-pearl text-ink px-3 py-1.5 rounded-lg">
                 {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                 {copied ? 'Copied!' : 'Copy'}
               </button>
@@ -201,7 +201,7 @@ function CrawlerControl({ brand }: { brand: string }) {
             </div>
           )}
         </div>
-        <pre className="bg-gray-950 rounded-lg p-4 text-xs text-green-400 font-mono overflow-auto max-h-[500px] whitespace-pre-wrap border border-gray-800">
+        <pre className="bg-paper rounded-lg p-4 text-xs text-green-400 font-mono overflow-auto max-h-[500px] whitespace-pre-wrap border border-soft-line">
           {robotsContent || 'Select a strategy and click "Generate robots.txt"'}
         </pre>
       </div>
@@ -273,8 +273,8 @@ export default function AIContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Content Generation &amp; AI Crawler Control</h1>
-        <p className="text-gray-400 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-ink">Content Generation &amp; AI Crawler Control</h1>
+        <p className="text-muted text-sm mt-1">
           Claude generates AI-optimised content based on your brand and live reputation data.
         </p>
         {brand && (
@@ -289,15 +289,15 @@ export default function AIContent() {
       <div className="flex flex-wrap gap-2">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activeTab === t.id ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${activeTab === t.id ? 'bg-sage text-ink' : 'bg-pearl text-muted hover:text-ink'}`}>
             {t.icon} {t.label}
           </button>
         ))}
       </div>
 
       {/* Description */}
-      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-3">
-        <p className="text-xs text-blue-300">{tab.description}</p>
+      <div className="bg-sage-soft border border-sage rounded-lg px-4 py-3">
+        <p className="text-xs text-sage">{tab.description}</p>
       </div>
 
       {/* Crawler control tab is separate */}
@@ -306,7 +306,7 @@ export default function AIContent() {
       ) : (
         <div className="space-y-4">
           {!brand ? (
-            <div className="bg-gray-900 rounded-xl border border-yellow-500/20 p-6 text-center">
+            <div className="bg-panel rounded-xl border border-yellow-500/20 p-6 text-center">
               <p className="text-yellow-300 text-sm">No brand configured — go to <a href="/settings" className="underline font-semibold">Settings</a> and select your project first.</p>
             </div>
           ) : (
@@ -317,7 +317,7 @@ export default function AIContent() {
                   <button
                     onClick={handleGenerate}
                     disabled={generating}
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-6 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-purple-500/20 transition-all"
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-ink px-6 py-3 rounded-xl text-sm font-semibold shadow-lg shadow-purple-500/20 transition-all"
                   >
                     {generating ? <Loader className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                     {generating ? `Claude is generating for ${brand}…` : `Generate ${tab.label} for ${brand}`}
@@ -327,18 +327,18 @@ export default function AIContent() {
 
               {/* Result */}
               {content && (
-                <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                <div className="bg-panel rounded-xl border border-soft-line p-6">
                   <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-400" />
-                      <h3 className="text-sm font-semibold text-white">Generated {tab.label}</h3>
-                      {generated?.word_count && <span className="text-xs text-gray-500">{generated.word_count} words</span>}
+                      <h3 className="text-sm font-semibold text-ink">Generated {tab.label}</h3>
+                      {generated?.word_count && <span className="text-xs text-muted">{generated.word_count} words</span>}
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <button
                         onClick={handleGenerate}
                         disabled={generating}
-                        className="flex items-center gap-1 text-xs bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 px-3 py-1.5 rounded-lg"
+                        className="flex items-center gap-1 text-xs bg-pearl hover:bg-pearl disabled:opacity-50 text-ink px-3 py-1.5 rounded-lg"
                       >
                         {generating ? <Loader className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3 text-purple-400" />}
                         Regenerate
@@ -348,7 +348,7 @@ export default function AIContent() {
                       {tab.hasPush && <PushButton />}
                     </div>
                   </div>
-                  <pre className="bg-gray-950 rounded-lg p-4 text-xs text-green-300 font-mono overflow-auto max-h-[520px] whitespace-pre-wrap border border-gray-800">
+                  <pre className="bg-paper rounded-lg p-4 text-xs text-green-300 font-mono overflow-auto max-h-[520px] whitespace-pre-wrap border border-soft-line">
                     {content}
                   </pre>
                 </div>

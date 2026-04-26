@@ -28,7 +28,7 @@ export function ContentStrategyTab() {
     return (
       <Card title="Content Strategy">
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading...</p>
+          <p className="text-muted">Loading...</p>
         </div>
       </Card>
     );
@@ -54,8 +54,8 @@ export function ContentStrategyTab() {
               />
             </svg>
           </div>
-          <p className="text-gray-700 font-medium mb-2">Gap Analysis Required</p>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-muted font-medium mb-2">Gap Analysis Required</p>
+          <p className="text-sm text-muted mb-6">
             Complete the gap analysis first to generate a content strategy.
           </p>
           <Button onClick={() => setActiveTab(0)}>Go to Gap Analysis</Button>
@@ -101,7 +101,7 @@ export function ContentStrategyTab() {
             </svg>
           </div>
           <p className="text-red-600 font-medium mb-2">Strategy generation failed</p>
-          <p className="text-sm text-gray-600 mb-4">{error.message}</p>
+          <p className="text-sm text-muted mb-4">{error.message}</p>
           <Button onClick={handleGenerateStrategy}>Try Again</Button>
         </div>
       </Card>
@@ -145,8 +145,8 @@ export function ContentStrategyTab() {
             />
           </svg>
         </div>
-        <p className="text-gray-600 mb-2">Ready to generate your content strategy</p>
-        <p className="text-sm text-gray-500 mb-6">
+        <p className="text-muted mb-2">Ready to generate your content strategy</p>
+        <p className="text-sm text-muted mb-6">
           Based on your gap analysis, we'll create actionable articles, structured data templates, PR angles, and quick wins.
         </p>
         <Button onClick={handleGenerateStrategy}>Generate Strategy</Button>

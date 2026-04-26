@@ -28,7 +28,7 @@ function StepIcon({ status }: { status: "pending" | "in_progress" | "complete" |
   switch (status) {
     case "complete":
       return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal text-white">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal text-ink">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
@@ -42,7 +42,7 @@ function StepIcon({ status }: { status: "pending" | "in_progress" | "complete" |
       );
     case "error":
       return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-ink">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -67,8 +67,8 @@ export function AnalysisProgress({ progress, isRunning }: AnalysisProgressProps)
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-gray-700">Analysis Progress</h4>
-        <span className="text-sm text-gray-500">{progressPercent}%</span>
+        <h4 className="text-sm font-medium text-muted">Analysis Progress</h4>
+        <span className="text-sm text-muted">{progressPercent}%</span>
       </div>
 
       {/* Progress bar */}
@@ -97,17 +97,17 @@ export function AnalysisProgress({ progress, isRunning }: AnalysisProgressProps)
                         ? "text-teal"
                         : status === "error"
                           ? "text-red-600"
-                          : "text-gray-500"
+                          : "text-muted"
                   }`}
                 >
                   {step.label}
                 </p>
                 {stepEvent?.message && (
-                  <p className="text-xs text-gray-500 mt-0.5">{stepEvent.message}</p>
+                  <p className="text-xs text-muted mt-0.5">{stepEvent.message}</p>
                 )}
               </div>
               {status === "in_progress" && isRunning && (
-                <span className="text-xs text-gray-400">Running...</span>
+                <span className="text-xs text-muted">Running...</span>
               )}
             </div>
           );
@@ -115,7 +115,7 @@ export function AnalysisProgress({ progress, isRunning }: AnalysisProgressProps)
       </div>
 
       {isRunning && (
-        <p className="text-xs text-center text-gray-500 pt-2">
+        <p className="text-xs text-center text-muted pt-2">
           Analysis in progress. This may take a few moments...
         </p>
       )}

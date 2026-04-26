@@ -54,7 +54,7 @@ export function BrandBriefForm() {
   };
 
   if (isLoading) {
-    return <Card><p className="text-gray-500">Loading...</p></Card>;
+    return <Card><p className="text-muted">Loading...</p></Card>;
   }
 
   const isComplete = brandName && domain && category && desiredClaims;

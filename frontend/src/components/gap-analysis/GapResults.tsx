@@ -40,24 +40,24 @@ function GapItem({ gap }: { gap: GapAnalysisGap }) {
 
       <div className="grid grid-cols-2 gap-4 text-sm">
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1">
             Current Claim
           </p>
-          <p className="text-gray-700">{gap.currentClaim || "Not mentioned"}</p>
+          <p className="text-muted">{gap.currentClaim || "Not mentioned"}</p>
         </div>
         <div>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+          <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1">
             Desired Claim
           </p>
-          <p className="text-gray-700">{gap.desiredClaim}</p>
+          <p className="text-muted">{gap.desiredClaim}</p>
         </div>
       </div>
 
       <div>
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
+        <p className="text-xs font-medium text-muted uppercase tracking-wide mb-1">
           Rationale
         </p>
-        <p className="text-sm text-gray-600">{gap.rationale}</p>
+        <p className="text-sm text-muted">{gap.rationale}</p>
       </div>
     </div>
   );
@@ -66,7 +66,7 @@ function GapItem({ gap }: { gap: GapAnalysisGap }) {
 function CitationSourcesTable({ sources }: { sources: CitationSource[] }) {
   if (!sources || sources.length === 0) {
     return (
-      <p className="text-sm text-gray-500 text-center py-4">
+      <p className="text-sm text-muted text-center py-4">
         No citation sources found
       </p>
     );
@@ -77,13 +77,13 @@ function CitationSourcesTable({ sources }: { sources: CitationSource[] }) {
       <table className="min-w-full divide-y divide-gray-200">
         <thead>
           <tr>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
               Domain
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">
               Trust Signal
             </th>
-            <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className="px-4 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">
               Mentions
             </th>
           </tr>
@@ -94,7 +94,7 @@ function CitationSourcesTable({ sources }: { sources: CitationSource[] }) {
               <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
                 {source.domain}
               </td>
-              <td className="px-4 py-3 text-sm text-gray-600">
+              <td className="px-4 py-3 text-sm text-muted">
                 {source.trustSignal}
               </td>
               <td className="px-4 py-3 text-sm text-gray-900 text-right whitespace-nowrap">
@@ -117,14 +117,14 @@ export function GapResults({ analysis }: GapResultsProps) {
     <div className="space-y-6">
       {/* Current State Summary */}
       <Card title="Current State">
-        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+        <p className="text-sm text-muted whitespace-pre-wrap">
           {analysis.currentStateSummary}
         </p>
       </Card>
 
       {/* Target State */}
       <Card title="Target State">
-        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+        <p className="text-sm text-muted whitespace-pre-wrap">
           {analysis.targetState}
         </p>
       </Card>
@@ -149,7 +149,7 @@ export function GapResults({ analysis }: GapResultsProps) {
         }
       >
         {analysis.gaps.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-4">
+          <p className="text-sm text-muted text-center py-4">
             No gaps identified. Your brand messaging aligns with LLM responses.
           </p>
         ) : (
@@ -167,7 +167,7 @@ export function GapResults({ analysis }: GapResultsProps) {
       </Card>
 
       {/* Metadata */}
-      <p className="text-xs text-gray-400 text-center">
+      <p className="text-xs text-muted text-center">
         Analysis completed on {formatDate(analysis.createdAt)}
       </p>
     </div>
