@@ -1,0 +1,72 @@
+run the backend and frontend
+
+---
+
+also add this "croesch" branch feature to the main also and change the design to match the design from this "croesch" instead of the blue, i want the dashboard to be white same kind of design as https://peec.ai/
+
+---
+
+call the app/dashboard Peekd
+
+---
+
+what kind of .env variables i need for this to work ?
+
+---
+
+here is the keys : OPENAIKEY = REDACTED
+REDACTED
+PEECAI APIKEY=  REDACTED
+
+---
+
+how many commits did you use ?
+
+---
+
+push those commits in github now
+
+---
+
+make the whole app use project and brand from settings not like (Peec AI Agents has its own projeect and brand dropdown they shoudl get from settings page) so we can have all controlled
+
+---
+
+just get the project and brand from local storage and make the settings page that change it because i see you add something inthe top and it's not hot reloaded
+
+---
+
+now nothing work like    at flushPassiveEffectsImpl (chunk-AVJPV5ZH.js?v=351749fa:19490:11)Understand this error
+chunk-AVJPV5ZH.js?v=351749fa:14032 The above error occurred in the <SelectionBanner> component:
+
+    at SelectionBanner (http://localhost:5173/src/components/layout/SelectionBanner.tsx?t=1777194386886:23:63)
+    at main
+    at MainArea (http://localhost:5173/src/App.tsx?t=1777194424029:34:24)
+    at div
+    at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=351749fa:4544:15)
+    at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=351749fa:5290:5)
+    at App
+    at QueryClientProvider (http://localhost:5173/node_modules/.vite/deps/@tanstack_react-query.js?v=351749fa:3235:3)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-AVJPV5ZH.js?v=351749fa:14032Understand this error
+chunk-AVJPV5ZH.js?v=351749fa:9129 Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+    at checkForNestedUpdates (chunk-AVJPV5ZH.js?v=351749fa:19659:19)
+    at scheduleUpdateOnFiber (chunk-AVJPV5ZH.js?v=351749fa:18533:11)
+    at forceStoreRerender (chunk-AVJPV5ZH.js?v=351749fa:11999:13)
+    at updateStoreInstance (chunk-AVJPV5ZH.js?v=351749fa:11975:13)
+    at commitHookEffectListMount (chunk-AVJPV5ZH.js?v=351749fa:16915:34)
+    at commitPassiveMountOnFiber (chunk-AVJPV5ZH.js?v=351749fa:18156:19)
+    at commitPassiveMountEffects_complete (chunk-AVJPV5ZH.js?v=351749fa:18129:17)
+    at commitPassiveMountEffects_begin (chunk-AVJPV5ZH.js?v=351749fa:18119:15)
+    at commitPassiveMountEffects (chunk-AVJPV5ZH.js?v=351749fa:18109:11)
+    at flushPassiveEffectsImpl (chunk-AVJPV5ZH.js?v=351749fa:19490:11)
+
+---
+
+i want you to check how many feature/tab needs prompt in peec, probably all to most, and in peec ai Agents i give the possibility to generate prompt for that using the Tracking prompts, i want you to take that out from there and make it it's own tab, where i can go and recommend me prompts for Sentiment Flip, Source Infiltration, gap analysis & brand analyze and i pick from a drop down and get recommondation and add them to peec ai with each prompt a topic to organize- before you start this task commit and push the changes you made
+
+---
+
+commit the changes
