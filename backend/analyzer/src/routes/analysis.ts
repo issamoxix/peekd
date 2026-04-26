@@ -78,6 +78,11 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
   const projectId = req.params.id;
   const acceptHeader = req.get("Accept") || "";
   const useSSE = acceptHeader.includes("text/event-stream");
+  const body = (req.body ?? {}) as { peecProjectId?: string };
+  const peecProjectId =
+    typeof body.peecProjectId === "string" && body.peecProjectId.trim()
+      ? body.peecProjectId.trim()
+      : undefined;
 
   // Check if project exists
   const project = db.prepare("SELECT id FROM projects WHERE id = ?").get(projectId);
@@ -121,22 +126,22 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
     try {
       // Step 1: Fetch brand report
       sendSSE(res, { type: "progress", step: "fetching_brand_report", status: "in_progress" });
-      const brandReport = await fetchBrandReport(brief.brandName);
+      const brandReport = await fetchBrandReport(brief.brandName, peecProjectId);
       sendSSE(res, { type: "progress", step: "fetching_brand_report", status: "complete" });
 
       // Step 2: Fetch domain report
       sendSSE(res, { type: "progress", step: "fetching_domain_report", status: "in_progress" });
-      const domainReport = await fetchDomainReport(brief.domain);
+      const domainReport = await fetchDomainReport(brief.domain, peecProjectId);
       sendSSE(res, { type: "progress", step: "fetching_domain_report", status: "complete" });
 
       // Step 3: Fetch URL report
       sendSSE(res, { type: "progress", step: "fetching_url_report", status: "in_progress" });
-      const urlReport = await fetchUrlReport();
+      const urlReport = await fetchUrlReport(peecProjectId);
       sendSSE(res, { type: "progress", step: "fetching_url_report", status: "complete" });
 
       // Step 4: Fetch chats list
       sendSSE(res, { type: "progress", step: "fetching_chats", status: "in_progress" });
-      const chats = await fetchChats(brief.brandName);
+      const chats = await fetchChats(brief.brandName, peecProjectId);
       sendSSE(res, { type: "progress", step: "fetching_chats", status: "complete" });
 
       // Step 5: Fetch chat contents (sample AI responses)
@@ -156,7 +161,7 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
 
       // Step 6: Fetch search queries
       sendSSE(res, { type: "progress", step: "fetching_search_queries", status: "in_progress" });
-      const searchQueries = await fetchSearchQueries(brief.brandName);
+      const searchQueries = await fetchSearchQueries(brief.brandName, peecProjectId);
       sendSSE(res, { type: "progress", step: "fetching_search_queries", status: "complete" });
 
       // Assemble PeecData
@@ -205,7 +210,7 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
   } else {
     // Non-SSE request - run synchronously and return JSON
     try {
-      const chats = await fetchChats(brief.brandName);
+      const chats = await fetchChats(brief.brandName, peecProjectId);
       const chatList = chats as Array<{ id?: string }>;
       const chatIds = chatList.slice(0, 3).map(c => c.id).filter(Boolean) as string[];
       const chatContents: unknown[] = [];
@@ -219,12 +224,12 @@ router.post("/:id/analysis", async (req: Request, res: Response) => {
       }
 
       const peecData: PeecData = {
-        brandReport: await fetchBrandReport(brief.brandName),
-        domainReport: await fetchDomainReport(brief.domain),
-        urlReport: await fetchUrlReport(),
+        brandReport: await fetchBrandReport(brief.brandName, peecProjectId),
+        domainReport: await fetchDomainReport(brief.domain, peecProjectId),
+        urlReport: await fetchUrlReport(peecProjectId),
         chats,
         chatContents,
-        searchQueries: await fetchSearchQueries(brief.brandName),
+        searchQueries: await fetchSearchQueries(brief.brandName, peecProjectId),
       };
 
       const analysisResult = await synthesizeGapAnalysis(brief, peecData);

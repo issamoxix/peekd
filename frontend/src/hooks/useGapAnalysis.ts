@@ -23,8 +23,17 @@ export interface RunAnalysisCallbacks extends SSECallbacks<GapAnalysis> {
   onError?: (error: SSEErrorEvent) => void;
 }
 
+export interface RunAnalysisOptions {
+  /** Peec project_id selected in Settings; forwarded to the analyzer backend. */
+  peecProjectId?: string;
+}
+
 export interface UseRunAnalysisResult {
-  runAnalysis: (projectId: string, callbacks?: RunAnalysisCallbacks) => void;
+  runAnalysis: (
+    projectId: string,
+    options?: RunAnalysisOptions,
+    callbacks?: RunAnalysisCallbacks
+  ) => void;
   cancel: () => void;
   isRunning: boolean;
   progress: SSEProgressEvent[];
@@ -70,7 +79,11 @@ export function useRunAnalysis(): UseRunAnalysisResult {
   }, []);
 
   const runAnalysis = useCallback(
-    (projectId: string, callbacks?: RunAnalysisCallbacks) => {
+    (
+      projectId: string,
+      options?: RunAnalysisOptions,
+      callbacks?: RunAnalysisCallbacks
+    ) => {
       // Cancel any existing request
       cancel();
 
@@ -91,6 +104,7 @@ export function useRunAnalysis(): UseRunAnalysisResult {
 
       runSSEFetch<GapAnalysis>(url, {
         method: "POST",
+        body: { peecProjectId: options?.peecProjectId },
         signal: abortController.signal,
         onProgress: (event) => {
           setProgress((prev) => {

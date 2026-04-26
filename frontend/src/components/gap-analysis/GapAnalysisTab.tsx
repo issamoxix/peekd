@@ -3,11 +3,13 @@ import { AnalysisProgress } from "./AnalysisProgress";
 import { GapResults } from "./GapResults";
 import { useProject } from "../../hooks/useProjects";
 import { useGapAnalysis, useRunAnalysis } from "../../hooks/useGapAnalysis";
+import { useCurrentSelection } from "../../hooks/useCurrentSelection";
 import { useProjectContext } from "../../context/ProjectContext";
 import { Button, Card } from "../ui";
 
 export function GapAnalysisTab() {
   const { currentProjectId } = useProjectContext();
+  const selection = useCurrentSelection();
   const { data: project } = useProject(currentProjectId);
   const { data: existingAnalysis, isLoading: isLoadingAnalysis } = useGapAnalysis(currentProjectId);
   const { runAnalysis, isRunning, progress, result, error, cancel } = useRunAnalysis();
@@ -17,7 +19,7 @@ export function GapAnalysisTab() {
 
   const handleRunAnalysis = () => {
     if (!currentProjectId) return;
-    runAnalysis(currentProjectId);
+    runAnalysis(currentProjectId, { peecProjectId: selection.projectId || undefined });
   };
 
   // Determine which analysis to show (new result takes precedence over existing)

@@ -1,30 +1,82 @@
+import { useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { ProjectProvider, useProjectContext } from "../context/ProjectContext";
-import { useProjects, useCreateProject } from "../hooks/useProjects";
+import { useProject, useCreateProject } from "../hooks/useProjects";
+import { useCurrentSelection } from "../hooks/useCurrentSelection";
 import { GapAnalysisTab } from "../components/gap-analysis";
 import { ContentStrategyTab } from "../components/content-strategy";
-import { Button } from "../components/ui";
-import type { Project } from "shared";
 
 const TABS = ["Gap Analysis", "Content Strategy", "Progress Tracker"];
 
-function ProjectPicker() {
-  const { data: projects, isLoading } = useProjects();
-  const { currentProjectId, setCurrentProjectId, setActiveTab } = useProjectContext();
-  const createProject = useCreateProject();
+function SelectionBanner() {
+  const selection = useCurrentSelection();
 
-  const handleNewProject = () => {
-    const name = prompt("Project name:");
-    if (!name) return;
-    const domain = prompt("Domain (e.g., example.com):");
-    if (!domain) return;
+  if (!selection.isConfigured) {
+    return (
+      <div className="bg-panel rounded-xl border border-soft-line p-4 mb-6 flex items-center justify-between">
+        <p className="text-sm text-muted">
+          No project/brand selected. Choose one in{" "}
+          <Link to="/settings" className="text-sage underline">
+            Settings
+          </Link>{" "}
+          to run the analyzer.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-panel rounded-xl border border-soft-line p-4 mb-6 flex items-center justify-between">
+      <div className="text-sm">
+        <span className="text-muted">Active brand: </span>
+        <span className="font-medium text-ink">{selection.brandName || "—"}</span>
+        {selection.projectName && (
+          <span className="text-muted ml-2 text-xs">
+            ({selection.projectName})
+          </span>
+        )}
+      </div>
+      <Link to="/settings" className="text-xs text-muted hover:text-ink">
+        Change in Settings →
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Resolves a local Analyzer project for the active Settings selection.
+ * The Peec brand_id is reused as the analyzer project id so the lookup is
+ * deterministic and Settings remains the single source of truth.
+ */
+function useResolveAnalyzerProject(brandId: string, brandName: string) {
+  const { setCurrentProjectId } = useProjectContext();
+  const { data: project, isLoading } = useProject(brandId || null);
+  const createProject = useCreateProject();
+  const attemptedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!brandId) {
+      setCurrentProjectId(null);
+      return;
+    }
+
+    if (project) {
+      setCurrentProjectId(brandId);
+      return;
+    }
+
+    if (isLoading) return;
+    if (attemptedRef.current === brandId) return;
+    attemptedRef.current = brandId;
 
     createProject.mutate(
       {
-        name,
-        domain,
+        id: brandId,
+        name: brandName || "Untitled brand",
+        domain: "",
         brief: {
-          brandName: name,
-          domain,
+          brandName: brandName || "",
+          domain: "",
           category: "",
           desiredTone: "Professional",
           desiredClaims: [],
@@ -33,47 +85,12 @@ function ProjectPicker() {
         },
       },
       {
-        onSuccess: (project) => {
-          setCurrentProjectId(project.id);
-          setActiveTab(0);
+        onSuccess: () => {
+          setCurrentProjectId(brandId);
         },
       }
     );
-  };
-
-  return (
-    <div className="bg-panel rounded-xl border border-soft-line p-4 mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-ink">Analyzer Projects</h2>
-        <Button onClick={handleNewProject} disabled={createProject.isPending}>
-          {createProject.isPending ? "Creating..." : "+ New Project"}
-        </Button>
-      </div>
-      {isLoading && <p className="text-muted text-sm">Loading…</p>}
-      <div className="flex flex-wrap gap-2">
-        {projects?.map((project: Project) => (
-          <button
-            key={project.id}
-            onClick={() => {
-              setCurrentProjectId(project.id);
-              setActiveTab(0);
-            }}
-            className={`px-3 py-2 rounded-lg text-sm transition-colors ${
-              currentProjectId === project.id
-                ? "bg-sage text-ink"
-                : "bg-pearl text-ink hover:bg-pearl"
-            }`}
-          >
-            <span className="font-medium">{project.name}</span>
-            <span className="opacity-60 ml-2 text-xs">{project.domain}</span>
-          </button>
-        ))}
-        {projects?.length === 0 && (
-          <p className="text-muted text-sm">No projects yet — create one to begin.</p>
-        )}
-      </div>
-    </div>
-  );
+  }, [brandId, brandName, project, isLoading, createProject, setCurrentProjectId]);
 }
 
 function AnalyzerTabs() {
@@ -101,12 +118,22 @@ function AnalyzerTabs() {
 }
 
 function AnalyzerBody() {
+  const selection = useCurrentSelection();
   const { currentProjectId, activeTab } = useProjectContext();
+  useResolveAnalyzerProject(selection.brandId, selection.brandName);
+
+  if (!selection.isConfigured) {
+    return (
+      <div className="bg-panel rounded-xl border border-soft-line p-12 text-center text-muted">
+        Select a project and brand in Settings to run the brand-gap analyzer.
+      </div>
+    );
+  }
 
   if (!currentProjectId) {
     return (
       <div className="bg-panel rounded-xl border border-soft-line p-12 text-center text-muted">
-        Select or create a project to run the brand-gap analyzer.
+        Loading analyzer for selected brand…
       </div>
     );
   }
@@ -133,7 +160,7 @@ export function Analyzer() {
             Gap analysis and content strategy powered by Peec AI + Claude
           </p>
         </div>
-        <ProjectPicker />
+        <SelectionBanner />
         <AnalyzerBody />
       </div>
     </ProjectProvider>

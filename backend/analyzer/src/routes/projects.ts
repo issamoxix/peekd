@@ -89,10 +89,52 @@ router.get("/:id", (req, res) => {
 
 // Create project with brief
 router.post("/", (req, res) => {
-  const body = req.body as CreateProjectRequest;
-  const projectId = uuid();
+  const body = req.body as CreateProjectRequest & { id?: string };
+  const projectId = body.id && body.id.trim() ? body.id.trim() : uuid();
   const briefId = uuid();
   const timestamp = now();
+
+  // If a caller-supplied id already exists, return the existing project rather
+  // than failing — this lets the frontend treat POST as an upsert keyed by the
+  // active Settings selection (Peec brand_id).
+  if (body.id) {
+    const existing = db
+      .prepare(
+        `SELECT p.*, b.id as brief_id, b.brand_name, b.domain as brief_domain,
+                b.category, b.desired_tone, b.desired_claims, b.key_differentiators,
+                b.competitors, b.created_at as brief_created_at, b.updated_at as brief_updated_at
+         FROM projects p
+         LEFT JOIN brand_briefs b ON b.project_id = p.id
+         WHERE p.id = ?`
+      )
+      .get(projectId) as Record<string, unknown> | undefined;
+
+    if (existing) {
+      const project: Project = {
+        id: existing.id as string,
+        name: existing.name as string,
+        domain: existing.domain as string,
+        createdAt: existing.created_at as string,
+        updatedAt: existing.updated_at as string,
+        brief: existing.brief_id
+          ? {
+              id: existing.brief_id as string,
+              projectId: existing.id as string,
+              brandName: existing.brand_name as string,
+              domain: existing.brief_domain as string,
+              category: existing.category as string,
+              desiredTone: existing.desired_tone as BrandBrief["desiredTone"],
+              desiredClaims: JSON.parse(existing.desired_claims as string),
+              keyDifferentiators: JSON.parse(existing.key_differentiators as string),
+              competitors: JSON.parse(existing.competitors as string),
+              createdAt: existing.brief_created_at as string,
+              updatedAt: existing.brief_updated_at as string,
+            }
+          : undefined,
+      };
+      return res.status(200).json(project);
+    }
+  }
 
   const insertProject = db.prepare(
     `INSERT INTO projects (id, name, domain, created_at, updated_at)

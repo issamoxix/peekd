@@ -23,8 +23,16 @@ export interface RunStrategyCallbacks extends SSECallbacks<ContentStrategy> {
   onError?: (error: SSEErrorEvent) => void;
 }
 
+export interface RunStrategyOptions {
+  peecProjectId?: string;
+}
+
 export interface UseRunStrategyResult {
-  runStrategy: (projectId: string, callbacks?: RunStrategyCallbacks) => void;
+  runStrategy: (
+    projectId: string,
+    options?: RunStrategyOptions,
+    callbacks?: RunStrategyCallbacks
+  ) => void;
   cancel: () => void;
   isRunning: boolean;
   progress: SSEProgressEvent[];
@@ -54,7 +62,11 @@ export function useRunStrategy(): UseRunStrategyResult {
   }, []);
 
   const runStrategy = useCallback(
-    (projectId: string, callbacks?: RunStrategyCallbacks) => {
+    (
+      projectId: string,
+      options?: RunStrategyOptions,
+      callbacks?: RunStrategyCallbacks
+    ) => {
       cancel();
       callbacksRef.current = callbacks;
 
@@ -70,6 +82,7 @@ export function useRunStrategy(): UseRunStrategyResult {
 
       runSSEFetch<ContentStrategy>(url, {
         method: "POST",
+        body: { peecProjectId: options?.peecProjectId },
         signal: abortController.signal,
         onProgress: (event) => {
           setProgress((prev) => {

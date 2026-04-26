@@ -35,7 +35,9 @@ export async function fetchProject(id: string): Promise<Project> {
   return handleResponse<Project>(response);
 }
 
-export async function createProject(data: CreateProjectRequest): Promise<Project> {
+export async function createProject(
+  data: CreateProjectRequest & { id?: string }
+): Promise<Project> {
   const response = await fetch(`${BASE_URL}/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -25,9 +25,23 @@ export function configurePeec(newConfig: Partial<PeecConfig>) {
   config = { ...getConfig(), ...newConfig };
 }
 
+/**
+ * The analyzer no longer requires PEEC_PROJECT_ID from env — the active Peec
+ * project is selected in Settings and threaded through each request. Only the
+ * API key needs to be configured at the process level.
+ */
 export function isPeecConfigured(): boolean {
-  const cfg = getConfig();
-  return !!cfg.apiKey && !!cfg.projectId;
+  return !!getConfig().apiKey;
+}
+
+function resolveProjectId(projectId?: string): string {
+  const resolved = projectId?.trim() || getConfig().projectId;
+  if (!resolved) {
+    throw new Error(
+      "Peec project_id missing. Select a project in Settings or set PEEC_PROJECT_ID in .env."
+    );
+  }
+  return resolved;
 }
 
 // Helper to make API requests
@@ -90,81 +104,89 @@ function getDateRange(): { start_date: string; end_date: string } {
   };
 }
 
-export async function fetchBrandReport(brandName: string): Promise<unknown> {
+export async function fetchBrandReport(
+  _brandName: string,
+  projectId?: string
+): Promise<unknown> {
   if (!isPeecConfigured()) {
-    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY in .env");
   }
 
+  const project_id = resolveProjectId(projectId);
   const { start_date, end_date } = getDateRange();
 
   try {
-    const result = await apiRequest("/reports/brands", {
-      project_id: getConfig().projectId,
+    return await apiRequest("/reports/brands", {
+      project_id,
       start_date,
       end_date,
     });
-
-    return result;
   } catch (error) {
     console.error("Error fetching brand report:", error);
     throw error;
   }
 }
 
-export async function fetchDomainReport(domain: string): Promise<unknown> {
+export async function fetchDomainReport(
+  _domain: string,
+  projectId?: string
+): Promise<unknown> {
   if (!isPeecConfigured()) {
-    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY in .env");
   }
 
+  const project_id = resolveProjectId(projectId);
   const { start_date, end_date } = getDateRange();
 
   try {
-    const result = await apiRequest("/reports/domains", {
-      project_id: getConfig().projectId,
+    return await apiRequest("/reports/domains", {
+      project_id,
       start_date,
       end_date,
       limit: 20,
     });
-
-    return result;
   } catch (error) {
     console.error("Error fetching domain report:", error);
     throw error;
   }
 }
 
-export async function fetchUrlReport(): Promise<unknown> {
+export async function fetchUrlReport(projectId?: string): Promise<unknown> {
   if (!isPeecConfigured()) {
-    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY in .env");
   }
 
+  const project_id = resolveProjectId(projectId);
   const { start_date, end_date } = getDateRange();
 
   try {
-    const result = await apiRequest("/reports/urls", {
-      project_id: getConfig().projectId,
+    return await apiRequest("/reports/urls", {
+      project_id,
       start_date,
       end_date,
       limit: 20,
     });
-
-    return result;
   } catch (error) {
     console.error("Error fetching URL report:", error);
     throw error;
   }
 }
 
-export async function fetchSearchQueries(brandName: string): Promise<unknown[]> {
+export async function fetchSearchQueries(
+  _brandName: string,
+  projectId?: string
+): Promise<unknown[]> {
   if (!isPeecConfigured()) {
-    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY in .env");
   }
 
+  const project_id = resolveProjectId(projectId);
+
   try {
-    const result = await apiRequest("/queries/search", {
-      project_id: getConfig().projectId,
+    const result = (await apiRequest("/queries/search", {
+      project_id,
       limit: 20,
-    }) as { rows?: unknown[] };
+    })) as { rows?: unknown[] };
 
     return result.rows || [];
   } catch (error) {
@@ -173,51 +195,59 @@ export async function fetchSearchQueries(brandName: string): Promise<unknown[]> 
   }
 }
 
-export async function fetchChats(brandName: string): Promise<unknown[]> {
+export async function fetchChats(
+  _brandName: string,
+  projectId?: string
+): Promise<unknown[]> {
   if (!isPeecConfigured()) {
-    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY in .env");
   }
 
+  const project_id = resolveProjectId(projectId);
+
   try {
-    // Use GET endpoint for listing chats
-    const result = await apiGet(`/chats?project_id=${getConfig().projectId}&limit=10`) as { rows?: unknown[] };
+    const result = (await apiGet(
+      `/chats?project_id=${encodeURIComponent(project_id)}&limit=10`
+    )) as { rows?: unknown[] };
 
     return result.rows || [];
   } catch (error) {
     console.error("Error fetching chats:", error);
-    // Return empty array if chats endpoint isn't available
     return [];
   }
 }
 
 export async function fetchChatContent(chatId: string): Promise<unknown> {
   if (!isPeecConfigured()) {
-    throw new Error("Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env");
+    throw new Error("Peec AI not configured. Set PEEC_API_KEY in .env");
   }
 
   try {
-    const result = await apiGet(`/chats/${chatId}`);
-    return result;
+    return await apiGet(`/chats/${chatId}`);
   } catch (error) {
     console.error("Error fetching chat content:", error);
     throw error;
   }
 }
 
-export async function fetchPeecData(brandName: string, domain: string): Promise<PeecData> {
+export async function fetchPeecData(
+  brandName: string,
+  domain: string,
+  projectId?: string
+): Promise<PeecData> {
   // Fetch all data in parallel
   const [brandReport, domainReport, urlReport, chats, searchQueries] = await Promise.all([
-    fetchBrandReport(brandName),
-    fetchDomainReport(domain),
-    fetchUrlReport(),
-    fetchChats(brandName),
-    fetchSearchQueries(brandName),
+    fetchBrandReport(brandName, projectId),
+    fetchDomainReport(domain, projectId),
+    fetchUrlReport(projectId),
+    fetchChats(brandName, projectId),
+    fetchSearchQueries(brandName, projectId),
   ]);
 
   // Fetch content for first few chats to get sample AI responses
   const chatContents: unknown[] = [];
   const chatList = chats as Array<{ id?: string }>;
-  const chatIds = chatList.slice(0, 3).map(c => c.id).filter(Boolean) as string[];
+  const chatIds = chatList.slice(0, 3).map((c) => c.id).filter(Boolean) as string[];
 
   for (const chatId of chatIds) {
     try {

@@ -8,6 +8,10 @@ import projectsRouter from "./routes/projects.js";
 import analysisRouter from "./routes/analysis.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+// Load .env from the analyzer workspace (covers both `tsx watch src/index.ts`
+// where __dirname=src and compiled `dist/index.js` where __dirname=dist).
+config({ path: resolve(__dirname, "../.env") });
+// Fallback to a repo-root .env if someone keeps secrets there instead.
 config({ path: resolve(__dirname, "../../.env") });
 
 const app = express();

@@ -1,12 +1,14 @@
 import { useProjectContext } from "../../context/ProjectContext";
 import { useGapAnalysis } from "../../hooks/useGapAnalysis";
 import { useContentStrategy, useRunStrategy, useToggleQuickWin } from "../../hooks/useContentStrategy";
+import { useCurrentSelection } from "../../hooks/useCurrentSelection";
 import { Button, Card } from "../ui";
 import { StrategyResults } from "./StrategyResults";
 import { AnalysisProgress } from "../gap-analysis/AnalysisProgress";
 
 export function ContentStrategyTab() {
   const { currentProjectId, setActiveTab } = useProjectContext();
+  const selection = useCurrentSelection();
   const { data: gapAnalysis, isLoading: isLoadingGap } = useGapAnalysis(currentProjectId);
   const { data: existingStrategy, isLoading: isLoadingStrategy } = useContentStrategy(currentProjectId);
   const { runStrategy, isRunning, progress, result, error, cancel } = useRunStrategy();
@@ -14,7 +16,7 @@ export function ContentStrategyTab() {
 
   const handleGenerateStrategy = () => {
     if (!currentProjectId) return;
-    runStrategy(currentProjectId);
+    runStrategy(currentProjectId, { peecProjectId: selection.projectId || undefined });
   };
 
   const handleToggleQuickWin = (quickWinId: string, completed: boolean) => {
