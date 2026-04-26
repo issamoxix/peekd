@@ -6,7 +6,7 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // FastAPI Sentinel backend (hamza features)
+      // FastAPI Peekd reputation backend (hamza features)
       "/api/dashboard": { target: "http://localhost:8000", changeOrigin: true },
       "/api/threats": { target: "http://localhost:8000", changeOrigin: true },
       "/api/heatmap": { target: "http://localhost:8000", changeOrigin: true },

@@ -37,7 +37,7 @@ export function Sidebar() {
             <Shield className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-base font-semibold tracking-tight text-ink">Sentinel</h1>
+            <h1 className="text-base font-semibold tracking-tight text-ink">Peekd</h1>
             <p className="text-[11px] text-muted uppercase tracking-wider font-semibold">
               Brand Intelligence
             </p>

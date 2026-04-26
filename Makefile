@@ -5,7 +5,7 @@ install:
 	cd backend/sentinel && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 	cd backend/agents && python3 -m venv venv && ./venv/bin/pip install -r requirements.txt
 
-# Run the full stack: frontend (5173) + analyzer Express (3001) + Sentinel FastAPI (8000) + Agents FastAPI (8001)
+# Run the full stack: frontend (5173) + analyzer Express (3001) + Peekd FastAPI (8000) + Agents FastAPI (8001)
 dev:
 	npx concurrently -k -n frontend,analyzer,sentinel,agents -c blue,green,magenta,cyan \
 		"npm run dev -w frontend" \

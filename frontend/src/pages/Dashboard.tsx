@@ -183,7 +183,7 @@ export default function Dashboard() {
       <div className="bg-sage-soft border border-sage rounded-xl p-4 flex items-center gap-3">
         <Shield className="w-5 h-5 text-sage" />
         <p className="text-sage text-sm">
-          Sentinel is actively monitoring your brand across major AI models.
+          Peekd is actively monitoring your brand across major AI models.
           {d.security_topic_enabled ? ' Security-topic filtering is enabled.' : ' Security-topic filtering is currently off.'}
         </p>
       </div>
