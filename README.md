@@ -227,21 +227,11 @@ PEECAI_API_KEY=your_peec_api_key
 # Optional but recommended
 ANTHROPIC_API_KEY=your_anthropic_key
 
-# Database
-DATABASE_URL=sqlite:///./sentinel.db
-
 # Security
 SECRET_KEY=random_secret_key_change_me
 
 # CORS
 CORS_ORIGINS=http://localhost:5173,http://localhost:3000
-
-# Email alerts (optional)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your@email.com
-SMTP_PASS=your_password
-ALERT_EMAIL_FROM=sentinel@yourdomain.com
 ```
 
 ## 🎯 How It Works
