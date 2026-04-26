@@ -160,6 +160,7 @@ class PeecClient:
         )
         # Response is just {"id": "to_..."} — not a full object
         item = data.get("data") or data
+        peec_cache.invalidate("list_topics", project_id=project_id)
         return Topic(id=item["id"], label=name)
 
     async def create_prompt(self, project_id: str, message: str, topic_id: Optional[str] = None,
@@ -179,6 +180,7 @@ class PeecClient:
         )
         # Response is just {"id": "pr_...", "warning": "..."} — not a full object
         item = data.get("data") or data
+        peec_cache.invalidate("list_prompts", project_id=project_id)
         return Prompt(
             id=item["id"],
             message=message,

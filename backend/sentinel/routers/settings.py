@@ -125,10 +125,21 @@ async def update_config(
         config_update.project_id is not None
         and config_update.project_id != config.project_id
     )
+    brand_changed = (
+        config_update.brand_id is not None
+        and config_update.brand_id != config.brand_id
+    )
     if config_update.project_id is not None:
         config.project_id = config_update.project_id
     if config_update.brand_id is not None:
         config.brand_id = config_update.brand_id
+    if project_changed or brand_changed:
+        # Reputation prompts are baked with a literal brand name at bootstrap time.
+        # Clear them when project/brand changes so the next bootstrap regenerates
+        # for the new brand instead of reusing stale ones.
+        config.custom_prompt_ids = None
+        config.security_topic_enabled = False
+        config.security_topic_id = None
     if project_changed and not config_update.brand_id:
         # Project changed but no brand chosen — pick the own brand if one exists,
         # and refresh company_name to match unless the caller explicitly set one.
@@ -321,12 +332,7 @@ async def bootstrap_risk_prompts(
             risk_topic = await peec_client.create_topic(payload.project_id, "Reputation Risk")
 
         prompts = await peec_client.list_prompts(payload.project_id)
-        risk_prompt_ids = [
-            p.id for p in prompts
-            if risk_topic.id in (p.topics or [])
-        ]
 
-        created_ids: List[str] = []
         # Resolve the real brand name — use payload > DB config > fallback
         brand_name = payload.brand_name
         if not brand_name:
@@ -334,6 +340,16 @@ async def bootstrap_risk_prompts(
             brand_name = (cfg.company_name or "") if cfg else ""
         brand_for_prompts = brand_name.strip() if brand_name and brand_name.strip() else "Your Brand"
 
+        # Only keep prompts in the topic that actually mention the current brand —
+        # otherwise prompts baked for an older brand keep displacing freshly-generated ones.
+        brand_lower = brand_for_prompts.lower()
+        risk_prompt_ids = [
+            p.id for p in prompts
+            if risk_topic.id in (p.topics or [])
+            and brand_lower in (p.message or "").lower()
+        ]
+
+        created_ids: List[str] = []
         generated_messages = await _generate_risk_prompts_with_anthropic(brand_for_prompts)
         existing_normalized = {
             _normalize_prompt_text(p.message): p.id
