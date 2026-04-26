@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Sidebar } from "./components/layout/Sidebar";
 import { Analyzer } from "./pages/Analyzer";
 import Agents from "./pages/Agents";
+import Adblume from "./pages/Adblume";
 import Dashboard from "./pages/Dashboard";
 import HeatMap from "./pages/HeatMap";
 import ThreatCenter from "./pages/ThreatCenter";
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/crawlers" element={<CrawlerConfig />} />
             <Route path="/agents" element={<Agents />} />
             <Route path="/analyzer" element={<Analyzer />} />
+            <Route path="/adblume" element={<Adblume />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </main>
