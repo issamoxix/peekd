@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useCurrentSelection } from "../hooks/useCurrentSelection";
 
 const API = "/agents-api";
-
-type Project = { id: string; name: string; status?: string };
-type Brand = { id: string; name: string; domains: string[]; is_own: boolean };
 
 type Recommendation = {
   text: string;
@@ -114,60 +113,36 @@ const TABS: { id: Tab; label: string; icon: string; hint: string }[] = [
 ];
 
 export default function Agents() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectId, setProjectId] = useState<string>("");
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [brandsLoading, setBrandsLoading] = useState(false);
-  const [brandId, setBrandId] = useState<string>("");
+  const { projectId, brandId, brandName, isConfigured, isLoading } = useCurrentSelection();
   const [tab, setTab] = useState<Tab>("prompts");
 
-  useEffect(() => {
-    fetch(`${API}/projects`)
-      .then((r) => r.json())
-      .then((d: { data: Project[] }) => {
-        const sorted = [...(d.data ?? [])].sort((a, b) => a.name.localeCompare(b.name));
-        setProjects(sorted);
-        if (sorted.length > 0) setProjectId(sorted[0].id);
-      })
-      .catch(() => {});
-  }, []);
+  if (isLoading) {
+    return <div className="text-muted text-sm">Loading workspace…</div>;
+  }
 
-  useEffect(() => {
-    if (!projectId) {
-      setBrands([]);
-      setBrandId("");
-      return;
-    }
-    setBrandsLoading(true);
-    setBrands([]);
-    setBrandId("");
-    const ctrl = new AbortController();
-    fetch(`${API}/brands?project_id=${encodeURIComponent(projectId)}`, { signal: ctrl.signal })
-      .then((r) => r.json())
-      .then((d: { data: Brand[] }) => {
-        const list = d.data ?? [];
-        setBrands(list);
-        const own = list.find((b) => b.is_own);
-        setBrandId((own ?? list[0])?.id ?? "");
-      })
-      .catch(() => {})
-      .finally(() => setBrandsLoading(false));
-    return () => ctrl.abort();
-  }, [projectId]);
+  if (!isConfigured) {
+    return (
+      <div className="space-y-6">
+        <Hero />
+        <div className="rounded-2xl border border-amber bg-amber-soft p-8 text-center">
+          <h2 className="text-lg font-semibold text-ink mb-2">No project or brand selected</h2>
+          <p className="text-muted mb-4">
+            The agents need a Peec project and brand to run against. Pick them on the Settings page first.
+          </p>
+          <Link
+            to="/settings"
+            className="inline-flex items-center gap-2 rounded-lg bg-sage px-4 py-2 text-sm font-semibold text-white hover:bg-graphite transition-colors"
+          >
+            Go to Settings
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="text-zinc-100 space-y-8">
-      <Hero />
-
-      <ProjectBrandPicker
-        projects={projects}
-        projectId={projectId}
-        setProjectId={setProjectId}
-        brands={brands}
-        brandsLoading={brandsLoading}
-        brandId={brandId}
-        setBrandId={setBrandId}
-      />
+      <Hero brandName={brandName} />
 
       <TabBar tab={tab} setTab={setTab} />
 
@@ -180,22 +155,21 @@ export default function Agents() {
   );
 }
 
-function Hero() {
+function Hero({ brandName }: { brandName?: string }) {
   return (
-    <header className="relative overflow-hidden rounded-2xl border border-white/10 card-surface px-6 py-8 sm:px-10 sm:py-12">
-      <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-violet-500/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
+    <header className="relative overflow-hidden rounded-2xl border border-line card-surface px-6 py-8 sm:px-10 sm:py-12">
       <div className="relative space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-zinc-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-gradient-to-r from-indigo-400 to-violet-400" />
+        <div className="inline-flex items-center gap-2 rounded-full border border-line bg-pearl px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-sage">
+          <span className="h-1.5 w-1.5 rounded-full bg-sage" />
           competitive war room
         </div>
-        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
+        <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-ink">
           <span className="gradient-text">Peec AI Agents</span>
         </h1>
-        <p className="max-w-2xl text-sm sm:text-[15px] leading-relaxed text-zinc-400">
+        <p className="max-w-2xl text-sm sm:text-[15px] leading-relaxed text-muted">
           Seed tracking prompts, scan AI responses for negative brand mentions, and run a daily competitive war
           room with live alerts.
+          {brandName && <> Currently focused on <span className="text-ink font-semibold">{brandName}</span>.</>}
         </p>
       </div>
     </header>
@@ -235,64 +209,6 @@ function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
         })}
       </div>
     </nav>
-  );
-}
-
-function ProjectBrandPicker({
-  projects,
-  projectId,
-  setProjectId,
-  brands,
-  brandsLoading,
-  brandId,
-  setBrandId,
-}: {
-  projects: Project[];
-  projectId: string;
-  setProjectId: (id: string) => void;
-  brands: Brand[];
-  brandsLoading: boolean;
-  brandId: string;
-  setBrandId: (id: string) => void;
-}) {
-  return (
-    <section className="rounded-xl border border-white/10 card-surface p-4 sm:p-5">
-      <div className="flex flex-wrap gap-4 sm:gap-6">
-        <Field label="Project">
-          <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            disabled={projects.length === 0}
-            className="input-base mt-1 w-72 rounded-lg px-3 py-2 text-sm text-zinc-100 disabled:opacity-50"
-          >
-            {projects.length === 0 && <option value="">loading…</option>}
-            {projects.map((p) => (
-              <option key={p.id} value={p.id} className="bg-[#0b0b14]">
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Brand">
-          <select
-            value={brandId}
-            onChange={(e) => setBrandId(e.target.value)}
-            disabled={brandsLoading || brands.length === 0}
-            className="input-base mt-1 w-72 rounded-lg px-3 py-2 text-sm text-zinc-100 disabled:opacity-50"
-          >
-            {brandsLoading && <option value="">loading…</option>}
-            {!brandsLoading && brands.length === 0 && <option value="">no brands in this project</option>}
-            {brands.map((b) => (
-              <option key={b.id} value={b.id} className="bg-[#0b0b14]">
-                {b.name}
-                {b.is_own ? " ★" : ""}
-                {b.domains?.[0] ? ` (${b.domains[0]})` : ""}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-    </section>
   );
 }
 
