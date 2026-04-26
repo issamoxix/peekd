@@ -15,9 +15,9 @@ import Settings from "./pages/Settings";
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="flex min-h-screen bg-gray-950">
+      <div className="flex min-h-screen">
         <Sidebar />
-        <main className="flex-1 ml-64 p-8 text-white">
+        <main className="flex-1 ml-64 p-8 text-ink">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />

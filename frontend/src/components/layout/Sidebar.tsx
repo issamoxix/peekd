@@ -5,7 +5,6 @@ import {
   Grid3X3,
   AlertTriangle,
   Sparkles,
-  Target,
   Building2,
   Settings as SettingsIcon,
   ListChecks,
@@ -31,41 +30,43 @@ const navItems = [
 
 export function Sidebar() {
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-gray-900 border-r border-gray-800 flex flex-col z-50">
-      <div className="p-6 border-b border-gray-800">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-panel border-r border-line flex flex-col z-50">
+      <div className="px-6 py-5 border-b border-soft-line">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 bg-sage rounded-lg flex items-center justify-center">
             <Shield className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">Sentinel</h1>
-            <p className="text-xs text-gray-400">Brand & Reputation Intelligence</p>
+            <h1 className="text-base font-semibold tracking-tight text-ink">Sentinel</h1>
+            <p className="text-[11px] text-muted uppercase tracking-wider font-semibold">
+              Brand Intelligence
+            </p>
           </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-blue-600/20 text-blue-400"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
+                  ? "bg-sage-soft text-sage"
+                  : "text-muted hover:text-ink hover:bg-pearl"
               }`
             }
           >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-4 h-4" />
             {label}
           </NavLink>
         ))}
       </nav>
 
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
-          <div className="w-2 h-2 rounded-full bg-green-500" />
+      <div className="px-4 py-3 border-t border-soft-line">
+        <div className="flex items-center gap-2 text-[11px] text-muted uppercase tracking-wider font-semibold">
+          <div className="w-1.5 h-1.5 rounded-full bg-sage" />
           System Active
         </div>
       </div>
