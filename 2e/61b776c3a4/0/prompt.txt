@@ -3,3 +3,7 @@ you will work on Brand Analyzer feature/tab, for brand analyze there is add new 
 ---
 
 i got this Peec AI not configured. Set PEEC_API_KEY and PEEC_PROJECT_ID in .env, meanwhile i already have peec ai key in the .env
+
+---
+
+commit those changes
